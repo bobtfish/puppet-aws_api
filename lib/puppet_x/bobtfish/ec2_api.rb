@@ -46,8 +46,12 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     self.class.regions
   end
 
+  def tags=(newtags)
+    newtags.each { |k,v| @property_hash[:aws_item].add_tag(k, :value => v) }
+    @property_hash[:tags] = newtags
+  end
+
   def flush
-    raise NotImplementedError
   end
 end
 

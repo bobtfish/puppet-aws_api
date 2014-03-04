@@ -13,6 +13,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     new(
+      :aws_item         => item,
       :name             => name,
       :id               => item.id,
       :ensure           => :present,
@@ -41,6 +42,9 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       vpc = ec2.regions[resource[:region]].vpcs.create(resource[:cidr])
       wait_until_state vpc, :available
       tag_with_name vpc, resource[:name]
+      tags = resource[:tags] || {}
+      tags.each { |k,v| vpc.add_tag(k, :value => v) }
+      vpc
     rescue Exception => e
       fail e
     end
