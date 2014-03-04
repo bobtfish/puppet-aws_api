@@ -52,7 +52,8 @@ aws_subnet { 'euwest1cdevc back tier subnet':
 #  route_table      => 'euwest1deveu'
 #}
 
-#aws_igw { '...':
-# ???
-#}
+aws_igw { 'eu-west-1deveu':
+ ensure => present,
+ vpc => 'eu-west-1deveu',
+}
 

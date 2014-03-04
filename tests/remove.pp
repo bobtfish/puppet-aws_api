@@ -17,6 +17,11 @@ aws_subnet { 'euwest1cdevc back tier subnet':
   tags   => {'ephemeral' => 'false', 'habitat' => 'euwest1cdevc', 'tier' => 'internal'},
 }
 ->
+aws_igw { 'eu-west-1deveu':
+ ensure => absent,
+ vpc => 'eu-west-1deveu',
+}
+->
 aws_vpc { 'eu-west-1deveu':
   ensure           => 'absent',
   cidr             => '10.84.0.0/16',
