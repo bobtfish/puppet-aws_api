@@ -2,22 +2,30 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 
 Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
+
+  def self.vpcs_for_region(region)
+    ec2.regions[region].vpcs
+  end
+  def vpcs_for_region(region)
+    self.class.vpcs_for_region region
+  end
+  def self.new_from_aws(region_name, item)
+    tags = item.tags.to_h
+    name = tags.delete('Name') || item.id
+    new(
+      :name             => name,
+      :id               => item.id,
+      :ensure           => :present,
+      :cidr             => item.cidr_block,
+      :dhcp_options_id  => item.dhcp_options_id,
+      :instance_tenancy => item.instance_tenancy.to_s,
+      :region           => region_name,
+      :tags             => tags
+    )
+  end
   def self.instances
-    regions.collect do |region|
-      ec2.regions[region].vpcs.collect do |item|
-        tags = item.tags.to_h
-        name = tags.delete('Name') || item.id
-        new(
-          :name             => name,
-          :id               => item.id,
-          :ensure           => :present,
-          :cidr             => item.cidr_block,
-          :dhcp_options_id  => item.dhcp_options_id,
-          :instance_tenancy => item.instance_tenancy.to_s,
-          :region           => region,
-          :tags             => tags
-        )
-      end
+    regions.collect do |region_name|
+      vpcs_for_region(region_name).collect { |item| new_from_aws(region_name, item) }
     end.flatten
   end
   [:cidr, :region, :dhcp_options_id, :instance_tenancy].each do |ro_method|

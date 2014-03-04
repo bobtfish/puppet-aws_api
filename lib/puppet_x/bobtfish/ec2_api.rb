@@ -31,8 +31,7 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def self.ec2
-    ec2 = AWS::EC2.new('access_key_id' => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']), 'secret_access_key' => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY']))
-    ec2
+    AWS::EC2.new('access_key_id' => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']), 'secret_access_key' => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY']))
   end
 
   def ec2
