@@ -1,3 +1,8 @@
+# git clone git@github.com:bobtfish/puppet-aws_api.git
+# cd puppet-aws_api
+# bundle install
+# bundle exec puppet apply test/init.pp --libdir lib
+
 aws_dopt { 'eu-west-1deveu':
   ensure => present
 #  ... TODO
