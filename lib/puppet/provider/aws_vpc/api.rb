@@ -5,13 +5,17 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet::Provider::Ec2_api) 
   def self.instances
     regions.collect do |region|
       ec2.regions[region].vpcs.collect do |item|
+        tags = item.tags.to_h
+        name = tags.delete('Name') || item.id
         new(
-          :name             => item.id,
+          :name             => name,
+          :id               => item.id,
           :ensure           => :present,
           :cidr             => item.cidr_block,
           :dhcp_options_id  => item.dhcp_options_id,
           :instance_tenancy => item.instance_tenancy,
-          :region           => region
+          :region           => region,
+          :tags             => tags
         )
       end
     end.flatten
