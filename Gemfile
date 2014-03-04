@@ -1,5 +1,6 @@
 source "http://rubygems.org"
 
+gem 'nokogiri', '~> 1.5.11'
 gem 'aws-sdk'
 
 group :test do
@@ -13,9 +14,9 @@ end
 
 group :development do
   gem "travis"
-  gem "travis-lint"
-  gem "vagrant-wrapper"
-  gem "puppet-blacksmith"
-  gem "guard-rake"
+#  gem "travis-lint"
+#  gem "vagrant-wrapper"
+#  gem "puppet-blacksmith"
+#  gem "guard-rake"
 end
 
