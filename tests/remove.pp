@@ -36,12 +36,11 @@ aws_igw { 'eu-west-1deveu':
 #  vpc    => 'us-west-1dev'
 #}
 
-#aws_cgw { 'eu-west-1deveu_6000':
-#  ensure => present,
-#  ip     => '208.178.67.126',
-#  asn    => 65000,
-#  vpc    => 'us-west-1dev'
-#}
+aws_cgw { 'eu-west-1deveu_6000':
+  ensure => absent,
+  ip_address     => '208.178.67.126',
+  bgp_asn    => 65000,
+} ->Aws_vpc['eu-west-1deveu']
 
 #aws_routetable { 'euwest1deveu':
 #  vpc              => 'us-west-1dev'

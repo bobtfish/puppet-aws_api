@@ -32,12 +32,13 @@ aws_subnet { 'euwest1cdevc back tier subnet':
 #  vpc    => 'us-west-1dev'
 #}
 
-#aws_cgw { 'eu-west-1deveu_6000':
-#  ensure => present,
-#  ip     => '208.178.67.126',
-#  asn    => 65000,
+aws_cgw { 'eu-west-1deveu_6000':
+  ensure     => present,
+  ip_address => '208.178.67.126',
+  bgp_asn    => 65000,
+  region     => 'eu-west-1',
 #  vpc    => 'us-west-1dev'
-#}
+}
 
 #aws_routetable { 'euwest1deveu':
 #  vpc              => 'us-west-1dev'
