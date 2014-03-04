@@ -29,10 +29,18 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet::Provider::Ec2_api) 
     @property_hash[:ensure] == :present
   end
   def create
-    raise("Cannot create yet moo #{self.inspect}")
+    begin
+      vpc = ec2.regions[resource[:region]].vpcs.create(resource[:cidr])
+      wait_until_state vpc, :available
+      tag_with_name vpc, resource[:name]
+    rescue Exception => e
+      fail e
+    end
   end
   def destroy
-    raise("Cannot destroy yet")
+    # FIXME - Should be able to delete any vpc, not just with region
+    vpc = find_tagged_with_name(ec2.regions[resource[:region]].vpcs, resource[:name])
+    vpc.delete if vpc
   end
 end
 

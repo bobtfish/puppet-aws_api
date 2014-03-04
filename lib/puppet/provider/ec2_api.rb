@@ -17,6 +17,14 @@ class Puppet::Provider::Ec2_api < Puppet::Provider
     end
   end
 
+  def wait_until_state(item, state)
+    sleep 1 until item.state == state
+  end
+
+  def tag_with_name(item, name)
+    item.add_tag 'Name', :value => name
+  end
+
   def self.ec2
     ec2 = AWS::EC2.new('access_key_id' => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']), 'secret_access_key' => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY']))
     ec2
