@@ -1,12 +1,24 @@
-# The baseline for module testing used by Puppet Labs is that each manifest
-# should have a corresponding test manifest that declares that class or defined
-# type.
-#
-# Tests are then run by using puppet apply --noop (to check for compilation
-# errors and view a log of events) or by fully applying the test in a virtual
-# environment (to compare the resulting system state to the desired state).
-#
-# Learn more about module testing here:
-# http://docs.puppetlabs.com/guides/tests_smoke.html
-#
-include aws_api
+aws_vpc { 'us-west-1dev':
+  ensure           => 'present',
+  cidr             => '10.40.0.0/19',
+  dhcp_options_id  => 'dopt-940a91fc',
+  id               => 'vpc-b7e309df',
+  instance_tenancy => 'default',
+  region           => 'us-west-1',
+  tags             => {'test' => 'tdoran'},
+}
+
+aws_subnet { 'uswest1cdevc back tier subnet':
+  vpc_id           => 'vpc-b7e309df', # FIXME - this should be vpc => 'us-west-1dev',
+  ensure           => 'present'
+}
+
+#aws_dopt { '...':
+#}
+
+#aws_igw { '...':
+#}
+
+#aws_routetable { '...':
+#}
+
