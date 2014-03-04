@@ -29,7 +29,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet::Provider::Ec2_api) 
     @property_hash[:ensure] == :present
   end
   def create
-    raise("Cannot create yet")
+    raise("Cannot create yet moo #{self.inspect}")
   end
   def destroy
     raise("Cannot destroy yet")
