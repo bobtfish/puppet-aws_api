@@ -19,6 +19,14 @@ aws_vpc { 'eu-west-1deveu':
   tags             => {'test' => 'tdoran'},
 }
 
+aws_subnet { 'euwest1cdevc back tier subnet':
+  ensure => 'present',
+  vpc    => 'eu-west-1deveu',
+  az     => 'eu-west-1c',
+  cidr   => '10.84.1.0/24',
+  tags   => {'ephemeral' => 'false', 'habitat' => 'euwest1cdevc', 'tier' => 'internal'},
+}
+
 #aws_vgw { 'eu-west-1deveu':
 #  type => 'ipsec.1',
 #  vpc    => 'us-west-1dev'
