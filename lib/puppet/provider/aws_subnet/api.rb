@@ -37,15 +37,6 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
     @property_hash[:ensure] == :present
   end
 
-  def find_vpc_item_by_name(name)
-    regions.map do |region_name|
-      vpcs_for_region(region_name).find do |vpc|
-        vpc_name = vpc.tags.to_h['Name'] || vpc.vpc_id
-        vpc_name == name
-      end
-    end.reject { |i| i.nil? }[0]
-  end
-
   def create
     begin
       vpc = find_vpc_item_by_name(resource[:vpc])

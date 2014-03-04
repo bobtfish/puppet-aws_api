@@ -53,7 +53,7 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
 
   def find_vpc_item_by_name(name)
     regions.map do |region_name|
-      ec2.regions[region_name].find do |vpc|
+      ec2.regions[region_name].vpcs.find do |vpc|
         vpc_name = vpc.tags.to_h['Name'] || vpc.vpc_id
         vpc_name == name
       end
@@ -62,7 +62,7 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
 
   def find_region_name_for_vpc_name(name)
     regions.find do |region_name|
-      ec2.regions[region_name].find do |vpc|
+      ec2.regions[region_name].vpcs.find do |vpc|
         vpc_name = vpc.tags.to_h['Name'] || vpc.vpc_id
         vpc_name == name
       end

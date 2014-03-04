@@ -56,6 +56,7 @@ Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     @property_hash[:vpc] = vpc_name
   end
   def destroy
+    @property_hash[:aws_item].detach(@property_hash[:aws_item].vpc) if @property_hash[:aws_item].vpc
     @property_hash[:aws_item].delete
     @property_hash[:ensure] = :absent
   end
