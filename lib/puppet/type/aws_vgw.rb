@@ -1,5 +1,5 @@
-Puppet::Type.newtype(:aws_cgw) do
-  @doc = "Manage AWS customer gateways"
+Puppet::Type.newtype(:aws_vgw) do
+  @doc = "Manage AWS virtual private gateways"
   newparam(:name)
   ensurable
   newproperty(:vpc_id) do
