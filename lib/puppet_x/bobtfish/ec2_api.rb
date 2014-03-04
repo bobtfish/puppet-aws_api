@@ -1,7 +1,12 @@
 require 'rubygems'
 require 'aws'
 
-class Puppet::Provider::Ec2_api < Puppet::Provider
+module Puppet_X
+  module Bobtfish
+  end
+end
+
+class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   desc "Helper for Providers which use the EC2 API"
   self.initvars
 
@@ -46,3 +51,4 @@ class Puppet::Provider::Ec2_api < Puppet::Provider
     raise NotImplementedError
   end
 end
+
