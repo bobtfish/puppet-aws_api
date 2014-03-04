@@ -13,9 +13,11 @@
 
 ##Overview
 
-A one-maybe-two sentence summary of what the module does/what problem it solves. This is your 30 second elevator pitch for your module. Consider including OS/Puppet version it works with.       
+This module provides a bridge allowing you to setup Amazon Web Services resources (such as VPCs and Subnets) using the puppet DSL.
 
 ##Module Description
+
+
 
 If applicable, this section should have a brief description of the technology the module integrates with and what that integration enables. This section should answer the questions: "What does this module *do*?" and "Why would I use it?"
 
@@ -29,9 +31,9 @@ If your module has a range of functionality (installation, configuration, manage
 * This is a great place to stick any warnings.
 * Can be in list or paragraph form. 
 
-###Setup Requirements **OPTIONAL**
+###Setup Requirements
 
-If your module requires anything extra before setting up (pluginsync enabled, etc.), mention it here. 
+Pluginsync must be enabled to use this module.
 
 ###Beginning with aws_api
 
@@ -43,9 +45,11 @@ If your most recent release breaks compatibility or requires particular steps fo
 
 Put the classes, types, and resources for customizing, configuring, and doing the fancy stuff with your module here. 
 
-##Reference
+## Types Reference
 
-Here, list the classes, types, providers, facts, etc contained in your module. This section should include all of the under-the-hood workings of your module so people know what the module is touching on their system but don't need to mess with things. (We are working on automating this section!)
+### aws_vpc
+
+### aws_subnet 
 
 ##Limitations
 
@@ -53,8 +57,6 @@ This is where you list OS compatibility, version compatibility, etc.
 
 ##Development
 
-Since your module is awesome, other users will want to play with it. Let them know what the ground rules for contributing are.
+Patches are welcome! Please submit a pull request on github :)
 
-##Release Notes/Contributors/Etc **Optional**
 
-If you aren't using changelog, put your release notes here (though you should consider using changelog). You may also add any additional sections you feel are necessary or important to include here. Please use the `## ` header. 
