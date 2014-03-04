@@ -13,7 +13,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet::Provider::Ec2_api) 
           :ensure           => :present,
           :cidr             => item.cidr_block,
           :dhcp_options_id  => item.dhcp_options_id,
-          :instance_tenancy => item.instance_tenancy,
+          :instance_tenancy => item.instance_tenancy.to_s,
           :region           => region,
           :tags             => tags
         )
