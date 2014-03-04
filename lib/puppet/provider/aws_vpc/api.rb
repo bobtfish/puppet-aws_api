@@ -1,4 +1,4 @@
-Puppet::Type.type(:aws_vps).provide(:api) do
+Puppet::Type.type(:aws_vpc).provide(:api) do
   commands :aws => 'aws'
 end
 
