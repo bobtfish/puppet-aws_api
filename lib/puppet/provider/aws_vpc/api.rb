@@ -20,7 +20,11 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet::Provider::Ec2_api) 
       end
     end.flatten
   end
-
+  [:cidr, :region, :dhcp_options_id, :instance_tenancy].each do |ro_method|
+    define_method("#{ro_method}=") do |v|
+      fail "Cannot manage #{ro_method} is read-only once a vpc is created"
+    end
+  end
   def exists?
     @property_hash[:ensure] == :present
   end
