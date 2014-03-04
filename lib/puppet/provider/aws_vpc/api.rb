@@ -50,9 +50,8 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     end
   end
   def destroy
-    # FIXME - Should be able to delete any vpc, not just with region
-    vpc = find_tagged_with_name(ec2.regions[resource[:region]].vpcs, resource[:name])
-    vpc.delete if vpc
+    @property_hash[:aws_item].delete
+    @property_hash[:ensure] = :absent
   end
 end
 

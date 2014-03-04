@@ -1,7 +1,7 @@
 # git clone git@github.com:bobtfish/puppet-aws_api.git
 # cd puppet-aws_api
 # bundle install
-# bundle exec puppet apply tests/init.pp --libdir lib
+# bundle exec puppet apply tests/create.pp --libdir lib
 
 # dopt-d1a9a3b3
 #aws_dopt { 'eu-west1-dev':
