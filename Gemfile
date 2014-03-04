@@ -1,5 +1,7 @@
 source "http://rubygems.org"
 
+gem 'aws-sdk'
+
 group :test do
   gem "rake"
   gem "puppet", ENV['PUPPET_VERSION'] || '~> 3.4.0'
