@@ -9,7 +9,14 @@
 #  ... TODO
 #}
 
-# vpc-5f7f613d
+aws_subnet { 'euwest1cdevc back tier subnet':
+  ensure => 'absent',
+  vpc    => 'eu-west-1deveu',
+  az     => 'eu-west-1c',
+  cidr   => '10.84.1.0/24',
+  tags   => {'ephemeral' => 'false', 'habitat' => 'euwest1cdevc', 'tier' => 'internal'},
+}
+->
 aws_vpc { 'eu-west-1deveu':
   ensure           => 'absent',
   cidr             => '10.84.0.0/16',
@@ -17,14 +24,6 @@ aws_vpc { 'eu-west-1deveu':
   instance_tenancy => 'default',
   region           => 'eu-west-1',
   tags             => {'test' => 'tdoran'},
-}
-
-aws_subnet { 'euwest1cdevc back tier subnet':
-  ensure => 'absent',
-  vpc    => 'eu-west-1deveu',
-  az     => 'eu-west-1c',
-  cidr   => '10.84.1.0/24',
-  tags   => {'ephemeral' => 'false', 'habitat' => 'euwest1cdevc', 'tier' => 'internal'},
 }
 
 #aws_vgw { 'eu-west-1deveu':
