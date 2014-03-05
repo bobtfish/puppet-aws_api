@@ -59,7 +59,7 @@ Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     if @property_hash[:aws_item].vpc
       begin # This blows up if already detached, but I can't find how to work that out. FIXME
         @property_hash[:aws_item].detach(@property_hash[:aws_item].vpc)
-        sleep 10 # Double FIXME - We should be able to wait for detached
+        sleep 45 # Double FIXME - We should be able to wait for detached
       rescue
       end
     end
