@@ -48,6 +48,12 @@ aws_cgw { 'eu-west-1deveu_6000':
   region     => 'eu-west-1',
 }
 
+aws_vpn { 'eu-west-1deveu_vpn':
+  vgw => 'eu-west-1deveu',
+  cgw => 'eu-west-1deveu_6000',
+  type => 'ipsec.1',
+}
+
 #aws_routetable { 'euwest1deveu':
 #  vpc              => 'us-west-1dev'
 #  main             => true,

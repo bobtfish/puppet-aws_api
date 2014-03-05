@@ -2,15 +2,15 @@ Puppet::Type.newtype(:aws_vpn) do
   @doc = "Manage AWS internet gateways"
   newparam(:name)
   ensurable
-  newproperty(:vpc_id) do
-  end
-  autorequire(:aws_vpc) do
-    self[:vpc_id]
-  end
-  newproperty(:vgw_id) do
+  newproperty(:vgw) do
   end
   autorequire(:aws_vgw) do
-    self[:vgw_id]
+    self[:vgw]
+  end
+  newproperty(:cgw) do
+  end
+  autorequire(:aws_cgw) do
+    self[:cgw]
   end
   validate do
   #  fail('vpc_id is required') if self[:vpc_id].nil?
