@@ -23,7 +23,7 @@ aws_subnet { 'euwest1cdevc back tier subnet':
 }
 ->
 aws_vpc { 'eu-west-1deveu':
-#  ensure           => 'absent',
+  ensure           => 'absent',
   cidr             => '10.84.0.0/16',
 #  dhcp_options     => 'eu-west-1-dev',
   instance_tenancy => 'default',
