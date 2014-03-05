@@ -61,6 +61,9 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def find_region_name_for_vpc_name(name)
+    self.class.find_region_name_for_vpc_name(name)
+  end
+  def self.find_region_name_for_vpc_name(name)
     regions.find do |region_name|
       ec2.regions[region_name].vpcs.find do |vpc|
         vpc_name = vpc.tags.to_h['Name'] || vpc.vpc_id
@@ -74,6 +77,15 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
 
   def exists?
     @property_hash[:ensure] == :present
+  end
+
+  def vpc=(vpc_name)
+    vpc = find_vpc_item_by_name(vpc_name)
+    if vpc.nil?
+      fail("Cannot find vpc #{vpc_name}")
+    end
+    @property_hash[:aws_item].attach(vpc)
+    @property_hash[:vpc] = vpc_name
   end
 end
 

@@ -34,10 +34,12 @@ aws_subnet { 'euwest1cdevc back tier subnet':
   },
 }
 
-#aws_vgw { 'eu-west-1deveu':
-#  type => 'ipsec.1',
-#  vpc    => 'us-west-1dev'
-#}
+aws_vgw { 'eu-west-1deveu':
+  ensure            => present,
+  vpn_type          => 'ipsec.1',
+  availability_zone => 'eu-west-1a',
+  vpc               => 'eu-west-1deveu'
+}
 
 aws_cgw { 'eu-west-1deveu_6000':
   ensure     => present,
@@ -49,14 +51,6 @@ aws_cgw { 'eu-west-1deveu_6000':
 #aws_routetable { 'euwest1deveu':
 #  vpc              => 'us-west-1dev'
 #  main             => true,
-#}
-
-#aws_subnet { 'euwest1deveu back tier subnet':
-#  vpc              => 'us-west-1dev'
-#  ensure           => 'present'
-#  cidr             => '10.84.0.0/24',
-#  az               => 'eu-west-1a',
-#  route_table      => 'euwest1deveu'
 #}
 
 aws_igw { 'eu-west-1deveu':

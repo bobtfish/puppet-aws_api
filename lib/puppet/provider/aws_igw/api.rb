@@ -25,9 +25,6 @@ Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       ec2.regions[region_name].internet_gateways.collect { |item| new_from_aws(item) }
     end.flatten
   end
-  def exists?
-    @property_hash[:ensure] == :present
-  end
   def create
     begin
       if ! resource[:vpc]
@@ -48,12 +45,6 @@ Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     rescue Exception => e
       fail e
     end
-  end
-  def vpc=(vpc_name)
-    if find_vpc_item_by_name(vpc_name).nil?
-      fail("Cannot find vpc #{vpc_name}")
-    end
-    @property_hash[:vpc] = vpc_name
   end
   def destroy
     @property_hash[:aws_item].detach(@property_hash[:aws_item].vpc) if @property_hash[:aws_item].vpc
