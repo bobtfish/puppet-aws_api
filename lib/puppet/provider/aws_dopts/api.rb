@@ -6,13 +6,18 @@ Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_a
   def self.new_from_aws(region_name, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
+    c = item.configuration
     new(
       :aws_item         => item,
       :name             => name,
       :id               => item.id,
       :region           => region_name,
       :ensure           => :present,
-      :tags             => tags
+      :tags                 => tags,
+      :domain_name          => c[:domain_name],
+      :ntp_servers          => c[:ntp_servers],
+      :netbios_name_servers => c[:netbios_name_servers],
+      :netbios_node_type    => c[:netbios_node_type]
     )
   end
   def self.instances
@@ -25,7 +30,12 @@ Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_a
   end
   def create
     begin
-      dopts = ec2.regions[resource[:region]].dhcp_options.create()
+      dopts = ec2.regions[resource[:region]].dhcp_options.create({
+        :domain_name          => resource[:domain_name],
+        :ntp_servers          => resource[:ntp_servers],
+        :netbios_name_servers => resource[:netbios_name_servers],
+        :netbios_node_type    => resource[:netbios_node_type]
+      })
       tag_with_name dopts, resource[:name]
       tags = resource[:tags] || {}
       tags.each { |k,v| dopts.add_tag(k, :value => v) }
