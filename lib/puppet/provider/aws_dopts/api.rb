@@ -16,8 +16,9 @@ Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_a
       :tags                 => tags,
       :domain_name          => c[:domain_name],
       :ntp_servers          => c[:ntp_servers],
+      :domain_name_servers  => c[:domain_name_servers],
       :netbios_name_servers => c[:netbios_name_servers],
-      :netbios_node_type    => c[:netbios_node_type]
+      :netbios_node_type    => c[:netbios_node_type].to_s
     )
   end
   def self.instances
@@ -27,17 +28,15 @@ Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_a
   end
   [:domain_name, :ntp_servers, :netbios_name_servers, :netbios_node_type].each do |ro_method|
     define_method("#{ro_method}=") do |v|
-      fail "Cannot manage #{ro_method} is read-only once a dopts set is created"
+      fail "Cannot manage #{ro_method} is read-only once a dopts set is created."
     end
-  end
-  def exists?
-    @property_hash[:ensure] == :present
   end
   def create
     begin
       dopts = ec2.regions[resource[:region]].dhcp_options.create({
         :domain_name          => resource[:domain_name],
         :ntp_servers          => resource[:ntp_servers],
+        :domain_name_servers  => resource[:domain_name_servers],
         :netbios_name_servers => resource[:netbios_name_servers],
         :netbios_node_type    => resource[:netbios_node_type]
       })

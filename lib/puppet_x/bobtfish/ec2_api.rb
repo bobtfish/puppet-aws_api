@@ -71,5 +71,9 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
 
   def flush
   end
+
+  def exists?
+    @property_hash[:ensure] == :present
+  end
 end
 

@@ -20,9 +20,6 @@ Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       ec2.regions[region_name].vpn_gateways.collect { |item| new_from_aws(region_name,item) }
     end.flatten
   end
-  def exists?
-    @property_hash[:ensure] == :present
-  end
   [:ip_address, :bgp_asn, :region].each do |ro_method|
     define_method("#{ro_method}=") do |v|
       fail "Cannot manage #{ro_method} is read-only once an vgw is created"

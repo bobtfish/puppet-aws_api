@@ -15,6 +15,8 @@ Puppet::Type.newtype(:aws_dopts) do
       end
     end
   end
+  newproperty(:domain_name_servers, :array_matching => :all) do
+  end
   newproperty(:ntp_servers, :array_matching => :all) do
   end
   newproperty(:netbios_name_servers, :array_matching => :all) do

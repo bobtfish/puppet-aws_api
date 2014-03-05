@@ -59,8 +59,11 @@ Read-only properties:
 
  * region
  * cidr
- * dhcp_options_id
  * instance_tenancy
+
+Read-write properties:
+
+ * dhcp_options
 
 ### aws_subnet 
 
@@ -80,6 +83,10 @@ Read-only properties:
   * type
 
 ### aws_dopts
+
+It would/should be possible to replace user created dhcp options sets,
+without having to remove and create a new one (as puppet could do this
+under the hood). This is not yet supported.
 
 Read-only properties:
   * region

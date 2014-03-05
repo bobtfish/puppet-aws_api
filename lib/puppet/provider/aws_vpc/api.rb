@@ -18,7 +18,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :id               => item.id,
       :ensure           => :present,
       :cidr             => item.cidr_block,
-      :dhcp_options_id  => item.dhcp_options_id,
+      :dhcp_options     => item.dhcp_options_id,
       :instance_tenancy => item.instance_tenancy.to_s,
       :region           => region_name,
       :tags             => tags
@@ -33,9 +33,6 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     define_method("#{ro_method}=") do |v|
       fail "Cannot manage #{ro_method} is read-only once a vpc is created"
     end
-  end
-  def exists?
-    @property_hash[:ensure] == :present
   end
   def create
     begin

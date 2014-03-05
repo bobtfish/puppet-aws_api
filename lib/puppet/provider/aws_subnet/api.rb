@@ -33,9 +33,6 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
       end.flatten
     end.flatten
   end
-  def exists?
-    @property_hash[:ensure] == :present
-  end
 
   def create
     begin
