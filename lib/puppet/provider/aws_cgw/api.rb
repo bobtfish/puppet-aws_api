@@ -7,14 +7,15 @@ Puppet::Type.type(:aws_cgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     new(
-      :aws_item         => item,
-      :name             => name,
-      :id               => item.id,
-      :bgp_asn          => item.bgp_asn,
-      :region           => region_name,
-      :ip_address       => item.ip_address,
-      :ensure           => :present,
-      :tags             => tags
+      :aws_item   => item,
+      :name       => name,
+      :id         => item.id,
+      :bgp_asn    => item.bgp_asn,
+      :type       => 'ipsec.1', # FIXME
+      :region     => region_name,
+      :ip_address => item.ip_address,
+      :ensure     => :present,
+      :tags       => tags
     )
   end
   def self.instances
@@ -25,7 +26,7 @@ Puppet::Type.type(:aws_cgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   def exists?
     @property_hash[:ensure] == :present
   end
-  [:ip_address, :bgp_asn, :region].each do |ro_method|
+  [:ip_address, :bgp_asn, :region, :type].each do |ro_method|
     define_method("#{ro_method}=") do |v|
       fail "Cannot manage #{ro_method} is read-only once an cgw is created"
     end

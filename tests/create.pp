@@ -37,7 +37,6 @@ aws_cgw { 'eu-west-1deveu_6000':
   ip_address => '208.178.67.126',
   bgp_asn    => 65000,
   region     => 'eu-west-1',
-#  vpc    => 'us-west-1dev'
 }
 
 #aws_routetable { 'euwest1deveu':
