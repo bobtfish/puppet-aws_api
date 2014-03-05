@@ -3,11 +3,12 @@
 # bundle install
 # bundle exec puppet apply tests/init.pp --libdir lib
 
-# dopt-d1a9a3b3
-#aws_dopt { 'eu-west1-dev':
-#  ensure => present
-#  ... TODO
-#}
+Aws_vpc['eu-west-1deveu'] ->
+aws_dopts { 'eu-west1-dev':
+  ensure      => 'absent',
+  domain_name => 'eu-west-1.compute.internal',
+  region      => 'eu-west-1',
+}
 
 aws_subnet { 'euwest1cdevc back tier subnet':
   ensure => 'absent',

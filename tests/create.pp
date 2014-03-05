@@ -3,17 +3,20 @@
 # bundle install
 # bundle exec puppet apply tests/create.pp --libdir lib
 
-# dopt-d1a9a3b3
-#aws_dopt { 'eu-west1-dev':
-#  ensure => present
-#  ... TODO
-#}
 
-# vpc-5f7f613d
+aws_dopts { 'eu-west1-dev':
+  ensure              => 'present',
+  domain_name          => 'eu-west-1.compute.internal',
+  region               => 'eu-west-1',
+  ntp_servers          => ['1.1.1.1'],
+  netbios_name_servers => ['2.2.2.2'],
+  domain_name_servers  => ['4.4.4.4']
+}
+
 aws_vpc { 'eu-west-1deveu':
   ensure           => 'present',
   cidr             => '10.84.0.0/16',
-#  dhcp_options     => 'eu-west-1-dev',
+  dhcp_options     => 'eu-west1-dev',
   instance_tenancy => 'default',
   region           => 'eu-west-1',
   tags             => {'test' => 'tdoran'},

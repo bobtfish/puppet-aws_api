@@ -81,6 +81,14 @@ Read-only properties:
 
 ### aws_dopts
 
+Read-only properties:
+  * region
+  * domain_name
+  * domain_name_servers (Array)
+  * ntp_servers (Array)
+  * netbios_name_servers (Array)
+  * netbios_node_type
+
 ### aws_igw
 
 Read-only properties:
