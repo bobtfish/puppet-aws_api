@@ -35,7 +35,7 @@ Puppet::Type.type(:aws_cgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       cgw = ec2.regions[resource[:region]].customer_gateways.create(resource[:bgp_asn].to_i, resource[:ip_address])
       tag_with_name cgw, resource[:name]
       tags = resource[:tags] || {}
-      tags.each { |k,v| igw.add_tag(k, :value => v) }
+      tags.each { |k,v| cgw.add_tag(k, :value => v) }
       cgw
     rescue Exception => e
       fail e
