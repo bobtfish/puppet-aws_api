@@ -9,6 +9,6 @@ Puppet::Type.newtype(:aws_iam_user) do
     end
   end
   newproperty(:arn)
-  newproperty(:groups)
+  newproperty(:groups, :array_matching => :all)
 end
 
