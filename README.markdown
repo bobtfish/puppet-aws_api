@@ -164,6 +164,29 @@ Immutable properties:
   * routing
   * static_routes
 
+### aws_iam_user
+
+Creation/deletion/enumeration supported.
+
+Immutable properties:
+  * path
+  * name
+  * arn
+
+Mutable properties:
+  * groups (Array of refs to aws_iam_group)
+
+### aws_iam_group
+
+Creation/deletion/enumeration supported.
+
+Immutable properties:
+  * arn
+  * name
+
+Mutable properties:
+  * policies (Hash of hashes - http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/IAM/Policy.html)
+
 ##Limitations
 
 This module is currently pretty dumb in many ways, and doesn't manage the whole set of available options
