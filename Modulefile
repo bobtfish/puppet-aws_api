@@ -1,5 +1,5 @@
 name          'bobtfish-aws_api'
-version       '0.0.1'
+version       '0.0.2'
 author        'Tomas Doran'
 license       'Apache License, Version 2.0'
 summary       'A bridge allowing you to setup Amazon Web Services resources (such as VPCs and Subnets) using the puppet DSL'
