@@ -8,10 +8,8 @@ Puppet::Type.type(:aws_iam_group).provide(:api, :parent => Puppet_X::Bobtfish::E
       :aws_item         => item,
       :name             => item.name,
       :id               => item.id,
-      :vpc              => vpc_name,
       :arn              => item.arn,
       :ensure           => :present,
-      :tags             => tags
     )
   end
   def self.instances

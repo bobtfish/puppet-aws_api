@@ -6,11 +6,12 @@ Puppet::Type.type(:aws_iam_user).provide(:api, :parent => Puppet_X::Bobtfish::Ec
   def self.new_from_aws(item)
     new(
       :aws_item         => item,
-      :name             => item.user_name,
+      :name             => item.name,
       :id               => item.id,
       :arn              => item.arn,
-      :ensure           => :present,
-      :tags             => tags
+      :path             => item.path,
+      :groups           => item.groups.map { |g| g.name },
+      :ensure           => :present
     )
   end
   def self.instances
@@ -18,7 +19,7 @@ Puppet::Type.type(:aws_iam_user).provide(:api, :parent => Puppet_X::Bobtfish::Ec
   end
   def create
     begin
-      iam.users.create(resource[:name])
+      iam.users.create(resource[:name], :path => resource[:path])
     rescue Exception => e
       fail e
     end
