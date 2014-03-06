@@ -10,10 +10,25 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
       :aws_item         => item,
       :name             => name,
       :id               => item.id,
-      :region           => region_name,
       :ensure           => :present,
-      :tags             => tags
+      :tags             => tags,
+      :vpc              => name_or_id(item.vpc),
+      :subnets          => item.subnets.map { |subnet| subnet.tags.to_h['Name'] || subnet.id },
+      :routes           => item.routes.map { |route|
+        {
+          :destination_cidr_block => route.destination_cidr_block,
+          :state => route.state,
+          :target => name_or_id(route.target),
+          :origin => route.origin,
+          :network_interface => name_or_id(route.network_interface),
+          :internet_gateway => name_or_id(route.internet_gateway)
+        }.reject { |k, v| v.nil? } }
     )
+  end
+  [:vpc, :subnets, :routes].each do |ro_method|
+    define_method("#{ro_method}=") do |v|
+      fail "Cannot manage #{ro_method} is read-only in this version of the module.."
+    end
   end
   def self.instances
     regions.collect do |region_name|

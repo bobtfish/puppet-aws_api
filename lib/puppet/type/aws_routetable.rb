@@ -1,10 +1,10 @@
 Puppet::Type.newtype(:aws_routetable) do
-  @doc = "Manage AWS subnets"
+  @doc = "Manage AWS route tables"
   newparam(:name)
   ensurable
+  newproperty(:vpc)
   newproperty(:subnets)
   newproperty(:routes)
-  newproperty(:propagation_vgws)
   newproperty(:tags)
 end
 

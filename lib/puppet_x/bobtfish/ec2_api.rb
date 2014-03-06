@@ -22,6 +22,14 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     end
   end
 
+  def self.name_or_id(item)
+    return unless item
+    item.tags.to_h['Name'] || item.id
+  end
+  def name_or_id(item)
+    self.class.name_or_id(item)
+  end
+
   def wait_until_state(item, state)
     sleep 1 until item.state == state
   end
