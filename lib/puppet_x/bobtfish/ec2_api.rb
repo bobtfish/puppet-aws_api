@@ -38,10 +38,20 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     item.add_tag 'Name', :value => name
   end
 
-  def self.ec2
-    AWS::EC2.new('access_key_id' => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']), 'secret_access_key' => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY']))
+  def self.amazon_thing(which)
+    which.new('access_key_id' => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']), 'secret_access_key' => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY']))
   end
 
+  def self.iam
+    amazon_thing(AWS::IAM)
+  end
+  def iam
+    self.class.iam
+  end
+
+  def self.ec2
+    amazon_thing(AWS::EC2)
+  end
   def ec2
     self.class.ec2
   end
