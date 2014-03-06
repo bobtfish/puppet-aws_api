@@ -1,5 +1,5 @@
 require 'rubygems'
-require 'aws'
+require 'aws-sdk'
 
 module Puppet_X
   module Bobtfish
