@@ -25,9 +25,10 @@ describe provider_class do
     provider_class.expects(:vpcs_for_region).returns([thingy])
     provider_class.instances
   end
-  it('finds 1 vpc') { expect(instances.size).to eql(1) }
-  it('has expected properties') { expect(instances[0].property_hash.reject { |k,v| k == :aws_item }).to \
-    eql({:region=>"us-west-1", :cidr=>"10.10.0.0/16", :dhcp_options_id=>"FIXME", :instance_tenancy=>"default", :ensure=>:present, :name=>"foo", :tags=>{}, :id=>"vpc-6666"}) }
-
+  if ENV['AWS_ACCESS_KEY']
+    it('finds 1 vpc') { expect(instances.size).to eql(1) }
+    it('has expected properties') { expect(instances[0].property_hash.reject { |k,v| k == :aws_item }).to \
+      eql({:region=>"us-west-1", :cidr=>"10.10.0.0/16", :dhcp_options_id=>"FIXME", :instance_tenancy=>"default", :ensure=>:present, :name=>"foo", :tags=>{}, :id=>"vpc-6666"}) }
+  end
 end
 
