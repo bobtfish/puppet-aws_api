@@ -4,12 +4,14 @@ Puppet::Type.type(:aws_iam_group).provide(:api, :parent => Puppet_X::Bobtfish::E
   mk_resource_methods
 
   def self.new_from_aws(item)
+    policies = Hash[item.policies.to_h.map { |k,v| [k,v.to_h] }]
     new(
       :aws_item         => item,
       :name             => item.name,
       :id               => item.id,
       :arn              => item.arn,
       :ensure           => :present,
+      :policies         => policies
     )
   end
   def self.instances

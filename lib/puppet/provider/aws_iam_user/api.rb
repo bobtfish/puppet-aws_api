@@ -26,8 +26,8 @@ Puppet::Type.type(:aws_iam_user).provide(:api, :parent => Puppet_X::Bobtfish::Ec
   def groups=(newgroups)
     groups_to_add = Set.new(newgroups).subtract(@property_hash[:groups]).to_a.map { |name| iam.groups[name] }
     groups_to_remove = Set.new(@property_hash[:groups]).subtract(newgroups).to_a.map { |name| iam.groups[name] }
-    puts groups_to_add.inspect
-    puts groups_to_remove.inspect
+    groups_to_add.each { |g| @property_hash[:aws_item].groups.add(g) }
+    groups_to_remove.each { |g| @property_hash[:aws_item].groups.remove(g) }
   end
   def create
     begin
