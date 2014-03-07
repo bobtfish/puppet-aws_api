@@ -1,3 +1,8 @@
-YYYY-MM-DD Release 0.0.1
-- something you did
-- something else you did
+- Fix confinement to not try to load the provider unless aws-sdk is available
+
+2013-03-06 Release 0.0.2
+- Add initial aws_iam_user and aws_iam_group support
+
+2013-03-05 Release 0.0.1
+- Initial release
+

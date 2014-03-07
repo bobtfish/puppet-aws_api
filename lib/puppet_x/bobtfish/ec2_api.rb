@@ -1,5 +1,4 @@
 require 'rubygems'
-require 'aws-sdk'
 
 module Puppet_X
   module Bobtfish
@@ -7,6 +6,10 @@ module Puppet_X
 end
 
 class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
+  HAVE_AWS_SDK = begin; require 'aws-sdk'; true; rescue Exception; false; end
+
+  confine :true => HAVE_AWS_SDK
+
   desc "Helper for Providers which use the EC2 API"
   self.initvars
 
@@ -57,7 +60,11 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def self.regions
-    ec2.regions.collect { |r| r.name }
+    if HAVE_AWS_SDK
+      ec2.regions.collect { |r| r.name }
+    else
+      []
+    end
   end
 
   def regions
