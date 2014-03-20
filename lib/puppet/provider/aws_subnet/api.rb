@@ -20,7 +20,7 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
       :vpc      => vpc_id,
       :cidr     => item.cidr_block,
       :az       => item.availability_zone_name,
-      :tags     => tags
+      :tags     => tags.to_hash
     )
   end
   def self.instances
@@ -33,7 +33,14 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
       end.flatten
     end.flatten
   end
-
+  [:vpc, :cidr].each do |ro_method|
+    define_method("#{ro_method}=") do |v|
+      fail "Cannot manage #{ro_method} is read-only once a subnet is created"
+    end
+  end
+  def tags=(value)
+    fail "Set tags not implemented yet"
+  end
   def create
     begin
       vpc = find_vpc_item_by_name(resource[:vpc])
