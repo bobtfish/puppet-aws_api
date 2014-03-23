@@ -60,10 +60,12 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def self.regions
-    if HAVE_AWS_SDK
-      ec2.regions.collect { |r| r.name }
-    else
-      []
+    @@regions ||= begin
+      if HAVE_AWS_SDK
+        ec2.regions.collect { |r| r.name }
+      else
+        []
+      end
     end
   end
 
@@ -77,12 +79,15 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def self.find_dhopts_item_by_name(name)
-    regions.map do |region_name|
-      ec2.regions[region_name].dhcp_options.find do |dopt|
-        dopt_name = dopt.tags.to_h['Name'] || dopt.id
-        dopt_name == name
-      end
-    end.reject { |i| i.nil? }[0]
+    @@dhoptions ||= begin
+      regions.collect do |region_name|
+        ec2.regions[region_name].dhcp_options
+      end.flatten
+    end
+    @@dhoptions.find do |dopt|
+      dopt_name = dopt.tags.to_h['Name'] || dopt.id
+      dopt_name == name
+    end
   end
 
   def find_dhopts_item_by_name(name)
@@ -90,12 +95,15 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def find_vpc_item_by_name(name)
-    regions.map do |region_name|
-      ec2.regions[region_name].vpcs.find do |vpc|
-        vpc_name = vpc.tags.to_h['Name'] || vpc.vpc_id
-        vpc_name == name
-      end
-    end.reject { |i| i.nil? }[0]
+    @@vpcs ||= begin
+      regions.collect do |region_name|
+        ec2.regions[region_name].vpcs
+      end.flatten
+    end
+    @@vpcs.find do |vpc|
+      vpc_name = vpc.tags.to_h['Name'] || vpc.vpc_id
+      vpc_name == name
+    end
   end
 
   def find_region_name_for_vpc_name(name)
