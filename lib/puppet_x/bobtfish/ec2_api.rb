@@ -81,12 +81,12 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   def self.find_dhopts_item_by_name(name)
     @@dhoptions ||= begin
       regions.collect do |region_name|
-        ec2.regions[region_name].dhcp_options
+        ec2.regions[region_name].dhcp_options.to_a
       end.flatten
     end
     @@dhoptions.find do |dopt|
       dopt_name = dopt.tags.to_h['Name'] || dopt.id
-      dopt_name == name
+      dopt_name == name || dopt.id == name
     end
   end
 
@@ -97,7 +97,7 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   def find_vpc_item_by_name(name)
     @@vpcs ||= begin
       regions.collect do |region_name|
-        ec2.regions[region_name].vpcs
+        ec2.regions[region_name].vpcs.to_a
       end.flatten
     end
     @@vpcs.find do |vpc|
