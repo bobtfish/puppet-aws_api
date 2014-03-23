@@ -12,13 +12,18 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   def self.new_from_aws(region_name, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
+    dopts_item = find_dhopts_item_by_name item.dhcp_options_id
+    dopts_name = nil
+    if dopts_item
+      dopts_name = dopts_item.tags.to_h['Name'] || dopts_item.id
+    end
     new(
       :aws_item         => item,
       :name             => name,
       :id               => item.id,
       :ensure           => :present,
       :cidr             => item.cidr_block,
-      :dhcp_options     => item.dhcp_options_id,
+      :dhcp_options     => dopts_name,
       :instance_tenancy => item.instance_tenancy.to_s,
       :region           => region_name,
       :tags             => tags
@@ -29,10 +34,13 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       vpcs_for_region(region_name).collect { |item| new_from_aws(region_name, item) }
     end.flatten
   end
-  [:cidr, :region, :dhcp_options_id, :instance_tenancy].each do |ro_method|
+  [:cidr, :region, :instance_tenancy].each do |ro_method|
     define_method("#{ro_method}=") do |v|
       fail "Cannot manage #{ro_method} is read-only once a vpc is created"
     end
+  end
+  def dhcp_options=(value)
+    @property_hash[:aws_item].dhcp_options = find_dhopts_item_by_name value
   end
   def create
     begin

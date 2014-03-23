@@ -76,6 +76,19 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     @property_hash[:tags] = newtags
   end
 
+  def self.find_dhopts_item_by_name(name)
+    regions.map do |region_name|
+      ec2.regions[region_name].dhcp_options.find do |dopt|
+        dopt_name = dopt.tags.to_h['Name'] || dopt.id
+        dopt_name == name
+      end
+    end.reject { |i| i.nil? }[0]
+  end
+
+  def find_dhopts_item_by_name(name)
+    self.class.find_dhopts_item_by_name(name)
+  end
+
   def find_vpc_item_by_name(name)
     regions.map do |region_name|
       ec2.regions[region_name].vpcs.find do |vpc|
