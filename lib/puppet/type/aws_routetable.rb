@@ -5,6 +5,10 @@ Puppet::Type.newtype(:aws_routetable) do
   newproperty(:vpc)
   newproperty(:subnets)
   newproperty(:routes)
+  newproperty(:main) do
+    newvalue 'true'
+    newvalue 'false'
+  end
   newproperty(:tags)
 end
 

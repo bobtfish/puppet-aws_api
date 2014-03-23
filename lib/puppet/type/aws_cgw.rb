@@ -13,7 +13,7 @@ Puppet::Type.newtype(:aws_cgw) do
   end
   newproperty(:bgp_asn) do
     validate do |value|
-      unless value =~ /^\d+$/
+      unless value.to_s =~ /^\d+$/
         raise ArgumentError , "'%s' is not a valid BGP ASN" % value
       end
     end

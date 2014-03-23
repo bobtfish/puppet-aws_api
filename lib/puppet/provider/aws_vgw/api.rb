@@ -8,8 +8,7 @@ Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     name = tags.delete('Name') || item.id
     vpc_name = nil
     if item.vpc
-      vpc_tags = item.vpc.tags
-      vpc_name = vpc_tags.has_key?('Name') ? vpc_tags['Name'] : item.vpc.id
+      vpc_name = name_or_id item.vpc
     end
     new(
       :aws_item         => item,

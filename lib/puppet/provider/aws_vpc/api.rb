@@ -15,7 +15,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     dopts_item = find_dhopts_item_by_name item.dhcp_options_id
     dopts_name = nil
     if dopts_item
-      dopts_name = dopts_item.tags.to_h['Name'] || dopts_item.id
+      dopts_name = name_or_id dopts_item
     end
     new(
       :aws_item         => item,

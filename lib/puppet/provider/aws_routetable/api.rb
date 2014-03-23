@@ -12,6 +12,7 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
       :id               => item.id,
       :ensure           => :present,
       :tags             => tags,
+      :main             => item.main? ? 'true' : 'false',
       :vpc              => name_or_id(item.vpc),
       :subnets          => item.subnets.map { |subnet| subnet.tags.to_h['Name'] || subnet.id },
       :routes           => item.routes.map { |route|

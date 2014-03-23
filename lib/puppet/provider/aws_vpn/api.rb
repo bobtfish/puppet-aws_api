@@ -8,13 +8,11 @@ Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     name = tags.delete('Name') || item.id
     cgw_name = nil
     if item.customer_gateway
-      customer_gateway_tags = item.customer_gateway.tags
-      cgw_name = customer_gateway_tags.has_key?('Name') ? customer_gateway_tags['Name'] : item.customer_gateway.id
+      cgw_name = name_or_id item.customer_gateway
     end
     vgw_name = nil
     if item.vpn_gateway
-      vpn_gateway_tags = item.vpn_gateway.tags
-      vgw_name = vpn_gateway_tags.has_key?('Name') ? vpn_gateway_tags['Name'] : item.vpn_gateway.id
+      vpn_name = name_or_id item.vpn_gateway
     end
     new(
       :aws_item         => item,
@@ -40,13 +38,13 @@ Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   def create
     begin
       cgw = regions.map do |region_name|
-        ec2.regions[region_name].customer_gateways.find { |item| (item.tags.to_h['Name'] || item.id)  == resource[:cgw] }
+        ec2.regions[region_name].customer_gateways.find { |item| name_or_id(item)  == resource[:cgw] }
       end.reject { |i| i.nil? }[0]
       if !cgw
         fail("Cannot findcgw #{resource[:cgw]}")
       end
       vgw = regions.map do |region_name|
-        ec2.regions[region_name].vpn_gateways.find { |item| (item.tags.to_h['Name'] || item.id)  == resource[:vgw] }
+        ec2.regions[region_name].vpn_gateways.find { |item| name_or_id(item)  == resource[:vgw] }
       end.reject { |i| i.nil? }[0]
       if !vgw
         fail("Cannot find vgw #{resource[:vgw]}")
@@ -54,7 +52,7 @@ Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       if !vgw.vpc
         fail("vgw #{resource[:vgw]} does not have a VPC associated with it, cannot find region")
       end
-      region = find_region_name_for_vpc_name (vgw.vpc.tags.to_h['Name'] || vgw.vpc.id)
+      region = find_region_name_for_vpc_name name_or_id(vgw.vpc)
       vpn = ec2.regions[region].vpn_connections.create({
         :customer_gateway => cgw,
         :vpn_gateway      => vgw,

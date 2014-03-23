@@ -26,7 +26,7 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
   def self.instances
     regions.collect do |region_name|
       vpcs_for_region(region_name).collect do |vpc|
-        vpc_name = vpc.tags.to_h['Name'] || vpc.vpc_id
+        vpc_name = name_or_id vpc
         vpc.subnets.collect do |item|
           new_from_aws(vpc_name, item)
         end
