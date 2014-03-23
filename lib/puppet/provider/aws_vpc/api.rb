@@ -44,11 +44,18 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   end
   def create
     begin
+      dhopts_name = nil
+      if resource[:dhcp_options]
+        dhopts_name = find_dhopts_item_by_name(resource[:dhcp_options]).id
+      end
       vpc = ec2.regions[resource[:region]].vpcs.create(resource[:cidr])
       wait_until_state vpc, :available
       tag_with_name vpc, resource[:name]
       tags = resource[:tags] || {}
       tags.each { |k,v| vpc.add_tag(k, :value => v) }
+      if dhopts_name
+        vpc.dhcp_options = dhopts_name
+      end
       vpc
     rescue Exception => e
       fail e

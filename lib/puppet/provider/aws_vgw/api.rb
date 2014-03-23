@@ -30,6 +30,9 @@ Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       fail "Cannot manage #{ro_method} is read-only once an vgw is created"
     end
   end
+  def vpc=(name)
+    @property_hash[:aws_item].attach(find_vpc_item_by_name name)
+  end
   def create
     if !resource[:vpc]
       fail("Must have a vpc")
