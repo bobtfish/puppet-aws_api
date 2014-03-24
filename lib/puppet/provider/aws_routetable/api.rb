@@ -40,12 +40,16 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
     @property_hash[:ensure] == :present
   end
   def create
+    vpc = find_vpc_item_by_name resource[:vpc]
+    if !vpc
+      fail("Could not find vpc #{resource[:vpc]}")
+    end
     begin
-      cgw = ec2.regions[resource[:region]].route_tables.create()
-      tag_with_name cgw, resource[:name]
+      route_table = ec2.route_tables.create({:vpc => vpc.id})
+      tag_with_name route_table, resource[:name]
       tags = resource[:tags] || {}
-      tags.each { |k,v| igw.add_tag(k, :value => v) }
-      cgw
+      tags.each { |k,v| route.add_tag(k, :value => v) }
+      route_table
     rescue Exception => e
       fail e
     end
