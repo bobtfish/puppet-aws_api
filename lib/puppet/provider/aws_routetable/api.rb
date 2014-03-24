@@ -44,8 +44,9 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
     if !vpc
       fail("Could not find vpc #{resource[:vpc]}")
     end
+    my_region = find_region_name_for_vpc_name resource[:vpc]
     begin
-      route_table = ec2.route_tables.create({:vpc => vpc.id})
+      route_table = ec2.regions[my_region].route_tables.create({:vpc => vpc.id})
       tag_with_name route_table, resource[:name]
       tags = resource[:tags] || {}
       tags.each { |k,v| route.add_tag(k, :value => v) }
