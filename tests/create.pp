@@ -4,7 +4,7 @@
 # bundle exec puppet apply tests/create.pp --libdir lib
 
 aws_dopts { 'eu-west1-dev':
-  ensure              => 'present',
+  ensure               => 'present',
   domain_name          => 'eu-west-1.compute.internal',
   region               => 'eu-west-1',
   ntp_servers          => ['1.1.1.1'],
@@ -48,10 +48,10 @@ aws_cgw { 'eu-west-1deveu_6000':
 }
 
 aws_vpn { 'eu-west-1deveu_vpn':
-  ensure     => present,
-  vgw => 'eu-west-1deveu',
-  cgw => 'eu-west-1deveu_6000',
-  type => 'ipsec.1',
+  ensure => present,
+  vgw    => 'eu-west-1deveu',
+  cgw    => 'eu-west-1deveu_6000',
+  type   => 'ipsec.1',
 }
 
 #aws_routetable { 'euwest1deveu':
