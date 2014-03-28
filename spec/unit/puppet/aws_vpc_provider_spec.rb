@@ -21,8 +21,7 @@ describe provider_class do
     thingy.stubs(:cidr_block).returns('10.10.0.0/16')
     thingy.stubs(:dhcp_options_id).returns('FIXME')
     thingy.stubs(:instance_tenancy).returns(:default)
-    provider_class.expects(:regions).returns(['us-west-1'])
-        provider_class.expects(:regions).returns(['us-west-1'])
+    provider_class.expects(:regions).at_least_once.returns(['us-west-1'])
     provider_class.expects(:vpcs_for_region).returns([thingy])
     provider_class.instances
   end
