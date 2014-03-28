@@ -45,9 +45,9 @@ aws_vgw { 'eu-west-1deveu':
 
 aws_vpn { 'eu-west-1deveu_vpn':
   ensure     => absent,
-  vgw => 'eu-west-1deveu',
-  cgw => 'eu-west-1deveu_6000',
-  type => 'ipsec.1',
+  vgw        => 'eu-west-1deveu',
+  cgw        => 'eu-west-1deveu_6000',
+  type       => 'ipsec.1',
 } -> Aws_cgw['eu-west-1deveu_6000']
 Aws_vpn['eu-west-1deveu_vpn']
 ->
