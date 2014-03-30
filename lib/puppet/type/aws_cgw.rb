@@ -21,7 +21,11 @@ Puppet::Type.newtype(:aws_cgw) do
   newproperty(:tags) do
   end
   newproperty(:region) do
-    Puppet_X::Bobtfish::Ec2_api.regions.each { |name| newvalue name }
+    begin
+      Puppet_X::Bobtfish::Ec2_api.regions.each { |name| newvalue name }
+    rescue Exception
+      []
+    end
   end
   newproperty(:type) do
     defaultto 'ipsec.1'
