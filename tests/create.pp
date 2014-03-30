@@ -5,11 +5,11 @@
 
 aws_dopts { 'eu-west1-dev':
   ensure               => 'present',
-  domain_name          => 'eu-west-1.compute.internal',
+  domain_name          => 'dev.yelpcorp.com',
   region               => 'eu-west-1',
-  ntp_servers          => ['1.1.1.1'],
-  netbios_name_servers => ['2.2.2.2'],
-  domain_name_servers  => ['4.4.4.4']
+  ntp_servers          => ['10.10.1.4'],
+  netbios_name_servers => ['10.10.1.4'],
+  domain_name_servers  => ['10.10.1.4']
 }
 
 aws_vpc { 'eu-west-1deveu':
@@ -18,7 +18,6 @@ aws_vpc { 'eu-west-1deveu':
   dhcp_options     => 'eu-west1-dev',
   instance_tenancy => 'default',
   region           => 'eu-west-1',
-  tags             => {'test' => 'tdoran'},
 }
 
 aws_subnet { 'euwest1cdevc back tier subnet':
@@ -54,13 +53,15 @@ aws_vpn { 'eu-west-1deveu_vpn':
   type   => 'ipsec.1',
 }
 
-#aws_routetable { 'euwest1deveu':
-#  vpc              => 'us-west-1dev'
-#  main             => true,
-#}
-
 aws_igw { 'eu-west-1deveu':
   ensure => present,
   vpc    => 'eu-west-1deveu',
+}
+
+aws_routetable { 'euwest1deveu':
+  vpc                    => 'eu-west-1dev'
+  main                   => true,
+  associated_subnets     => 'euwest1cdeveu back tier subnet',
+  distribute_routes_from => [ Aws_igw['eu-west-1deveu'], Aws_vgw['eu-west-1deveu'] ]
 }
 
