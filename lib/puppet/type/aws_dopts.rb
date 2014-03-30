@@ -6,7 +6,11 @@ Puppet::Type.newtype(:aws_dopts) do
   ensurable
   newproperty(:tags)
   newproperty(:region) do
-    Puppet_X::Bobtfish::Ec2_api.regions.each { |name| newvalue name }
+    begin
+      Puppet_X::Bobtfish::Ec2_api.regions.each { |name| newvalue name }
+    rescue Exception
+      []
+    end
   end
   newproperty(:domain_name) do
     validate do |value|
