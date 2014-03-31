@@ -41,8 +41,14 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     item.add_tag 'Name', :value => name
   end
 
+  def self.get_creds
+    unless false
+      {'access_key_id' => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']), 'secret_access_key' => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY'])}
+    end
+  end
+
   def self.amazon_thing(which)
-    which.new('access_key_id' => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']), 'secret_access_key' => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY']))
+    which.new(get_creds)
   end
 
   def self.iam
