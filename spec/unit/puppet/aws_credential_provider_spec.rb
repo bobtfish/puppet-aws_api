@@ -28,5 +28,14 @@ describe type_class do
       expect { described_class.new(other_params)}.to raise_error
     end
   end
+
+  it "should make account queryable from the catalog" do
+    new_creds = described_class.new(params)
+    catalog = Puppet::Resource::Catalog.new
+    catalog.add_resource new_creds
+    creds = []
+    catalog.resources.find_all {|r| creds.push r if r.is_a?(type_class)}
+    creds[0].title.should eq("baz")
+  end
 end
 
