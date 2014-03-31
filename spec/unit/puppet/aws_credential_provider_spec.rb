@@ -13,13 +13,19 @@ describe provider_class do
 end
 
 describe type_class do
+  params = {:name => "baz", :access_key => "foo", :secret_key => "bar"}
   it "should be able to create an instance" do
-    described_class.new(:name => 'foo').should_not be_nil
+    described_class.new(params).should_not be_nil
   end
 
-  [:access_key, :secret_key].each do |param|
+  params.each_key do |param|
     it "should accept #{param} parameter" do
-      described_class.attrtype(param).should == :property
+      described_class.attrtype(param).should == :param
+    end
+
+    it "should fail if #{param} is not given" do
+      other_params = params.reject {|k, _| k == param}
+      expect { described_class.new(other_params)}.to raise_error
     end
   end
 end
