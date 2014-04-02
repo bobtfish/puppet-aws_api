@@ -14,5 +14,6 @@ Puppet::Type.newtype(:aws_subnet) do
   newproperty(:az)
   newproperty(:route_table)
   newproperty(:tags)
+  newparam(:account) { defaultto 'default' }
 end
 

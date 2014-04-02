@@ -17,13 +17,13 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     raise NotImplementedError
   end
 
-  def self.prefetch(resources)
-    instances.each do |provider|
-      if resource = resources[provider.name] then
-        resource.provider = provider
-      end
-    end
-  end
+#  def self.prefetch(resources)
+#    instances.each do |provider|
+#      if resource = resources[provider.name] then
+#        resource.provider = provider
+#      end
+#    end
+#  end
 
   def self.name_or_id(item)
     return unless item

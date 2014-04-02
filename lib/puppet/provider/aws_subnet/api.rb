@@ -23,6 +23,21 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
       :tags     => tags.to_hash
     )
   end
+  def exists?
+    puts "Trying to work out if subnet #{resource[:name]} works"
+    if resource.catalog # Normal run, we have a catalog and so can look up credentials
+      account = resource.catalog.resources.find do |r|
+        r.is_a?(Puppet::Type.type(:aws_credential)) && r[:name] == resource[:account]
+      end
+      if ! account && resource[:account] != 'default'
+        raise("No account #{resource[:account]} found, did you make an aws_credential {}")
+      end    
+      puts "Username is #{account[:user]} Password is #{account[:password]}"
+    else
+      puts "This is a 'puppet resource' run, no catalog - have to get by on default credentials"
+      true # We came here as self.instances returned a thing, so it's gotta exist :)
+    end
+  end
   def self.instances
     regions.collect do |region_name|
       vpcs_for_region(region_name).collect do |vpc|
