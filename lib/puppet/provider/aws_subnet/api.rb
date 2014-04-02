@@ -3,11 +3,8 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
 
-  def self.vpcs_for_region(region)
-    ec2.regions[region].vpcs
-  end
-  def vpcs_for_region(region)
-    self.class.vpcs_for_region region
+  def self.vpcs_for_region(region, access_key, secret_key)
+    ec2(access_key, secret_key).regions[region].vpcs
   end
   def self.new_from_aws(vpc_id, item)
     tags = item.tags.to_h
@@ -33,6 +30,10 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
         raise("No account #{resource[:account]} found, did you make an aws_credential {}")
       end    
       puts "Username is #{account[:user]} Password is #{account[:password]}"
+      e = ec2(account[:user], account[:password])
+      region_names = e.regions.collect { |r| r.name }
+      subnets = region_names.collect { |r_name| e.regions[r_name].subnets }.flatten
+      subnets.find { |subnet| subnet.id == resource[:name] || subnet.tags['Name'] == resource[:name] }
     else
       puts "This is a 'puppet resource' run, no catalog - have to get by on default credentials"
       true # We came here as self.instances returned a thing, so it's gotta exist :)
@@ -40,7 +41,7 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
   end
   def self.instances
     regions.collect do |region_name|
-      vpcs_for_region(region_name).collect do |vpc|
+      vpcs_for_region(region_name, *default_credentials).collect do |vpc|
         vpc_name = name_or_id vpc
         vpc.subnets.collect do |item|
           new_from_aws(vpc_name, item)

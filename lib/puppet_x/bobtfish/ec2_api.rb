@@ -25,6 +25,10 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
 #    end
 #  end
 
+  def self.default_credentials
+    [(ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']), (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY']))]
+  end
+
   def self.name_or_id(item)
     return unless item
     item.tags.to_h['Name'] || item.id
@@ -41,22 +45,22 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     item.add_tag 'Name', :value => name
   end
 
-  def self.amazon_thing(which)
-    which.new('access_key_id' => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']), 'secret_access_key' => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY']))
+  def self.amazon_thing(which, access_key, secret_key)
+    which.new('access_key_id' => access_key, 'secret_access_key' => secret_key)
   end
 
-  def self.iam
-    amazon_thing(AWS::IAM)
+  def self.iam(access_key, secret_key)
+    amazon_thing(AWS::IAM, access_key, secret_key)
   end
-  def iam
-    self.class.iam
+  def iam(access_key, secret_key)
+    self.class.iam(access_key, secret_key)
   end
 
-  def self.ec2
-    amazon_thing(AWS::EC2)
+  def self.ec2(access_key, secret_key)
+    amazon_thing(AWS::EC2, access_key, secret_key)
   end
-  def ec2
-    self.class.ec2
+  def ec2(access_key, secret_key)
+    self.class.ec2((access_key, secret_key)
   end
 
   def self.regions
