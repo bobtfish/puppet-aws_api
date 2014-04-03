@@ -45,19 +45,24 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
 
   def get_creds
     if resource
+      #FIXME
+      account = 'baz'
       credentials = resource.catalog.resources.find_all do |r|
-        r.is_a?(Puppet::Type.type(:aws_credential))
-      end
+        r.is_a?(Puppet::Type.type(:aws_credential)) && credentials.name == account
+      end.first
     end
-    if credentials == [] or credentials == nil
+    if credentials == nil
       self.class.default_creds
     else
-      raise ItWorkedError
+      {:access_key_id => cred[:access_key], :secret_access_key => cred[:secret_key]}
     end
   end
 
   def self.default_creds
-    {'name' => 'default', 'access_key_id' => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']), 'secret_access_key' => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY'])}
+    {
+      :access_key_id => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']), 
+      :secret_access_key => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY'])
+    }
   end
 
   def self.amazon_thing(which, creds=self.default_creds)
