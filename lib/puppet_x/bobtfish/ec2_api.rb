@@ -5,6 +5,8 @@ module Puppet_X
   end
 end
 
+class ItWorkedError < Exception; end
+
 class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   HAVE_AWS_SDK = begin; require 'aws-sdk'; true; rescue Exception; false; end
 
@@ -42,8 +44,10 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def get_creds
-    credentials = resources.values.first.catalog.resources.find_all do |r|
-      r.is_a?(Puppet::Type.type(:aws_credential))
+    if resource
+      credentials = resource.catalog.resources.find_all do |r|
+        r.is_a?(Puppet::Type.type(:aws_credential))
+      end
     end
     if credentials == [] or credentials == nil
       self.class.default_creds
@@ -57,7 +61,6 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def self.amazon_thing(which, creds=self.default_creds)
-    
     which.new(creds)
   end
 
