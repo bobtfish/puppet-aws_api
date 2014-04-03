@@ -31,5 +31,12 @@ Puppet::Type.newtype(:aws_cgw) do
       end
     end
   end
+  autorequire(:aws_credential) do
+    requires = []
+    catalog.resources.find_all do |r|
+      r.is_a?(Puppet::Type.type(:aws_credential))
+    end.each { |r| requires << r[:name] }
+    requires
+  end
 end
 
