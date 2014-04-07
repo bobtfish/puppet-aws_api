@@ -59,7 +59,7 @@ aws_igw { 'eu-west-1deveu':
 }
 
 aws_routetable { 'euwest1deveu':
-  vpc                    => 'eu-west-1dev'
+  vpc                    => 'eu-west-1dev',
   main                   => true,
   associated_subnets     => 'euwest1cdeveu back tier subnet',
   distribute_routes_from => [ Aws_igw['eu-west-1deveu'], Aws_vgw['eu-west-1deveu'] ]
