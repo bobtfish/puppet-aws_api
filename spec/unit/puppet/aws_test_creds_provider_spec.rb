@@ -49,6 +49,17 @@ describe type_class do
         :access_key_id => "foo", :secret_access_key => "bar"})
     end
   end
+  context "with wrong redentials referenced" do
+    it "should use the default credentials" do
+      catalog.add_resource credentials
+      catalog.add_resource described_class.new(:name => "foo", :account => "bernard")
+      lambda { provider.create }.should_not raise_error
+      provider.get_creds.should eq( {
+        :access_key_id => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']), 
+        :secret_access_key => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY'])
+      })
+    end
+  end
   context "without credentials added" do
     it "should use the default credentials" do
       catalog.add_resource described_class.new(params)
