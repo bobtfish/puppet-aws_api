@@ -1,9 +1,6 @@
-Puppet::Type.newtype(:aws_iam_group) do
-  @doc = "Manage AWS IAM groups"
+Puppet::Type.newtype(:aws_test_creds) do
+  @doc = "Run tests against credential backend :)"
   newparam(:name)
-  ensurable
-  newproperty(:policies)
-  newproperty(:arn)
   autorequire(:aws_credentials) do
     requires = []
     res = catalog.resources.find_all do |r|
