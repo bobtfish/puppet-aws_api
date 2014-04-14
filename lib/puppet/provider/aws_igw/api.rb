@@ -35,7 +35,7 @@ Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       end
       igw = ec2.regions[region_name].internet_gateways.create()
       if resource[:vpc]
-        igw.attach(find_vpc_item_by_name resource[:vpc])
+        igw.attach(find_vpc_item_by_name(resource[:vpc]))
       end
       tag_with_name igw, resource[:name]
       tags = resource[:tags] || {}

@@ -30,7 +30,7 @@ Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     end
   end
   def vpc=(name)
-    @property_hash[:aws_item].attach(find_vpc_item_by_name name)
+    @property_hash[:aws_item].attach(find_vpc_item_by_name(name))
   end
   def create
     if !resource[:vpc]
@@ -47,9 +47,9 @@ Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
           fail("Cannot find az '#{resource[:availability_zone]}', need to choose.com: #{azs.to_a.join(", ")}")
         end
       end
-      vgw = ec2.regions[find_region_name_for_vpc_name resource[:vpc]].vpn_gateways.create([:vpn_type, :availability_zone].inject({}) { |acc, k| acc[k] = resource[k] if resource[k]; acc })
+      vgw = ec2.regions[find_region_name_for_vpc_name(resource[:vpc])].vpn_gateways.create([:vpn_type, :availability_zone].inject({}) { |acc, k| acc[k] = resource[k] if resource[k]; acc })
       tag_with_name vgw, resource[:name]
-      vgw.attach(find_vpc_item_by_name resource[:vpc])
+      vgw.attach(find_vpc_item_by_name(resource[:vpc]))
       tags = resource[:tags] || {}
       tags.each { |k,v| vgw.add_tag(k, :value => v) }
       vgw
