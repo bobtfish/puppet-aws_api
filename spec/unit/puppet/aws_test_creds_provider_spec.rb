@@ -11,6 +11,7 @@ describe provider_class do
   it('does not have any instances') do
     expect(instances.size).to eql 0
   end
+
 end
 
 describe type_class do
@@ -68,6 +69,26 @@ describe type_class do
         :access_key_id => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']), 
         :secret_access_key => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY'])
       })
+    end
+  end
+  context "with instances in the catalog" do
+    let(:credentials) {[
+      {:name => 'bar', :access_key => 'a', :secret_key => 'a'},
+      {:name => 'foo', :access_key => 'b', :secret_key => 'b'},
+    ]}
+    before :each do 
+      credentials.each do |cred| 
+        catalog.add_resource(Puppet::Type.type(:aws_credential).new(cred))
+      end
+      catalog.add_resource described_class.new(params)
+    end
+
+    it "should be able to extract resources from the catalog by account" do
+      res = catalog.resources.find_all do |r|
+        r.is_a?(described_class) && r[:account] == 'bar'
+      end
+      res.count.should eq(1)
+      res[0].name.should eq('baz')
     end
   end
 end
