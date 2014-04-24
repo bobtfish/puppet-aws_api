@@ -11,6 +11,6 @@ Puppet::Type.newtype(:aws_iam_group) do
     end
     res.each { |r| requires << r[:name] }
   end
-  newparam(:account)
+  newproperty:account
 end
 

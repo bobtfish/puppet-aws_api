@@ -27,6 +27,6 @@ Puppet::Type.newtype(:aws_vpn) do
     end
     res.each { |r| requires << r[:name] }
   end
-  newparam(:account)
+  newproperty:account
 end
 

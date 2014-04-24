@@ -21,6 +21,6 @@ Puppet::Type.newtype(:aws_subnet) do
     end
     res.each { |r| requires << r[:name] }
   end
-  newparam(:account)
+  newproperty:account
 end
 

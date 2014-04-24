@@ -18,6 +18,6 @@ Puppet::Type.newtype(:aws_vgw) do
     end
     res.each { |r| requires << r[:name] }
   end
-  newparam(:account)
+  newproperty:account
 end
 
