@@ -23,7 +23,7 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
       :tags     => tags.to_hash
     )
   end
-  def self.instances
+  def self.instances(creds=nil)
     regions.collect do |region_name|
       vpcs_for_region(region_name).collect do |vpc|
         vpc_name = name_or_id vpc

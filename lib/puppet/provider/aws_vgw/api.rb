@@ -19,7 +19,7 @@ Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :tags             => tags
     )
   end
-  def self.instances
+  def self.instances(creds=nil)
     regions.collect do |region_name|
       ec2.regions[region_name].vpn_gateways.collect { |item| new_from_aws(item) }
     end.flatten

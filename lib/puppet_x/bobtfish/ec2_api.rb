@@ -20,7 +20,11 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def self.prefetch(resources)
-    instances.each do |provider|
+    catalog = resources.values.first.catalog
+    creds = catalog.resources.find_all do |r|
+      r.is_a?(Puppet::Type.type(:aws_credential)) && r.name == account
+    end
+    instances(creds).each do |provider|
       if resource = resources[provider.name] then
         resource.provider = provider
       end

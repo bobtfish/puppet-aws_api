@@ -21,7 +21,7 @@ Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_a
       :netbios_node_type    => c[:netbios_node_type].to_s
     )
   end
-  def self.instances
+  def self.instances(creds=nil)
     regions.collect do |region_name|
       ec2.regions[region_name].dhcp_options.collect { |item| new_from_aws(region_name,item) }
     end.flatten

@@ -29,7 +29,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :tags             => tags
     )
   end
-  def self.instances
+  def self.instances(creds=nil)
     regions.collect do |region_name|
       vpcs_for_region(region_name).collect { |item| new_from_aws(region_name, item) }
     end.flatten

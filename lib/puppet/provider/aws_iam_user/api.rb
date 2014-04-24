@@ -15,7 +15,7 @@ Puppet::Type.type(:aws_iam_user).provide(:api, :parent => Puppet_X::Bobtfish::Ec
       :ensure           => :present
     )
   end
-  def self.instances
+  def self.instances(creds=nil)
     iam.users.collect { |item| new_from_aws(item) }
   end
   [:arn, :path, :name].each do |ro_method|

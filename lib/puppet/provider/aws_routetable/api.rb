@@ -31,7 +31,7 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
       fail "Cannot manage #{ro_method} is read-only in this version of the module.."
     end
   end
-  def self.instances
+  def self.instances(creds=nil)
     regions.collect do |region_name|
       ec2.regions[region_name].route_tables.collect { |item| new_from_aws(region_name,item) }
     end.flatten

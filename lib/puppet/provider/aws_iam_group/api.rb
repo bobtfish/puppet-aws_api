@@ -14,7 +14,7 @@ Puppet::Type.type(:aws_iam_group).provide(:api, :parent => Puppet_X::Bobtfish::E
       :policies         => policies
     )
   end
-  def self.instances
+  def self.instances(creds=nil)
     iam.groups.collect { |item| new_from_aws(item) }
   end
   [:arn, :name].each do |ro_method|

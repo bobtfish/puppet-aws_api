@@ -3,7 +3,7 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_test_creds).provide(:test, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
 
-  def self.instances
+  def self.instances(creds=nil)
     []
   end
   def create
