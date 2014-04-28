@@ -14,7 +14,7 @@ describe provider_class do
     expect(instances.size).to eql 0
   end
 
-  context "with some crap happening" do
+  context "with credentials in the catalog" do
     let(:credentials) {[
       {:name => 'bar', :access_key => 'a', :secret_key => 'a'},
       {:name => 'foo', :access_key => 'b', :secret_key => 'b'},
@@ -37,7 +37,6 @@ describe provider_class do
       provider_class.prefetch({:foo => blah})
     end
   end
-
 end
 
 describe type_class do
@@ -115,19 +114,6 @@ describe type_class do
       end
       res.count.should eq(1)
       res[0].name.should eq('baz')
-    end
-
-    it "should receive an array of credentials as an argument to instances" do
-      blah = mock('object')
-      blah.expects(:catalog).returns(catalog)
-      #provider_class.should_receive(:instances) do |arg1|
-      Puppet::Type::Aws_test_creds::ProviderTest.should_receive(:instances) do |arg1|
-        cred_names = []
-        arg1.each {|x| cred_names << x.name}
-        cred_names.sort.should eq(['bar', 'foo'])
-        []
-      end
-      provider_class.prefetch({:foo => blah})
     end
   end
 end
