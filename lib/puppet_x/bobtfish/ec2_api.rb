@@ -22,8 +22,9 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   def self.prefetch(resources)
     catalog = resources.values.first.catalog
     creds = catalog.resources.find_all do |r|
-      r.is_a?(Puppet::Type.type(:aws_credential)) && r.name == account
+      r.is_a?(Puppet::Type.type(:aws_credential))
     end
+    puts creds.inspect
     instances(creds).each do |provider|
       if resource = resources[provider.name] then
         resource.provider = provider
@@ -49,7 +50,6 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
 
   def get_creds
     if resource
-      #FIXME
       account = resource[:account]
       cred = resource.catalog.resources.find_all do |r|
         r.is_a?(Puppet::Type.type(:aws_credential)) && r.name == account
