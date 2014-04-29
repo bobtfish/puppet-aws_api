@@ -1,5 +1,6 @@
 #!/usr/bin/env rspec
-require 'spec_helper'
+#require 'spec_helper'
+require 'puppet'
 
 type_class = Puppet::Type.type(:aws_test_creds)
 provider_class = type_class.provider(:test)
@@ -26,8 +27,8 @@ describe provider_class do
       catalog.add_resource type_class.new(params)
     end
     it "should receive an array of credentials as an argument to instances" do
-      blah = mock('object')
-      blah.expects(:catalog).returns(catalog)
+      blah = double('object')
+      expect(blah).to receive(:catalog).and_return(catalog)
       described_class.should_receive(:instances) do |arg1|
         cred_names = []
         arg1.each {|x| cred_names << x.name}
@@ -50,9 +51,9 @@ describe type_class do
   let(:provider) { provider_class.new }
   let(:catalog) { Puppet::Resource::Catalog.new }
   let(:resource) {
-    resource = mock('object')
-    resource.expects(:catalog).at_least_once.returns(catalog)
-    resource.expects(:[]).at_least_once.returns('baz')
+    resource = double('object')
+    expect(resource).to receive(:catalog).and_return(catalog).at_least(:once)
+    expect(resource).to receive(:[]).and_return('baz').at_least(:once)
     resource
   }
   it "should be able to create an instance" do
@@ -63,7 +64,7 @@ describe type_class do
     before :each do
       catalog.add_resource credentials
       catalog.add_resource described_class.new(params)
-      provider.expects(:resource).at_least_once.returns(resource)
+      expect(provider).to receive(:resource).and_return(resource).at_least(:once)
     end
 
     it "should make credentials queryable from the catalog" do

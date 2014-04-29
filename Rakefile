@@ -1,4 +1,5 @@
-require 'puppetlabs_spec_helper/rake_tasks'
+#require 'puppetlabs_spec_helper/rake_tasks'
+require 'rspec/core/rake_task'
 require 'puppet-lint/tasks/puppet-lint'
 require 'puppet-syntax/tasks/puppet-syntax'
 
@@ -31,6 +32,7 @@ desc "Run acceptance tests"
 RSpec::Core::RakeTask.new(:acceptance) do |t|
   t.pattern = 'spec/acceptance'
 end
+RSpec::Core::RakeTask.new(:spec)
 
 desc "Run syntax, lint, and spec tests."
 task :test => [
