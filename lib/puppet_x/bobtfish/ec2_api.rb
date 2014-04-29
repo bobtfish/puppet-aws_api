@@ -24,8 +24,8 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     creds = catalog.resources.find_all do |r|
       r.is_a?(Puppet::Type.type(:aws_credential))
     end
-    puts creds.inspect
-    instances(creds).each do |provider|
+    credential_hashes = creds.collect {|x| extract_creds(x)}
+    instances(credential_hashes).each do |provider|
       if resource = resources[provider.name] then
         resource.provider = provider
       end
@@ -61,6 +61,14 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     else
       {:access_key_id => cred[:access_key], :secret_access_key => cred[:secret_key]}
     end
+  end
+
+  def self.extract_creds(cred_resource)
+    {
+      :name => cred_resource[:name],
+      :access_key_id => cred_resource[:access_key], 
+      :secret_access_key => cred_resource[:secret_key]
+    }
   end
 
   def self.default_creds

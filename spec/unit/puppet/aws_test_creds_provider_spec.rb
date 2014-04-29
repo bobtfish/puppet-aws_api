@@ -15,6 +15,16 @@ describe provider_class do
     expect(instances.size).to eql 0
   end
 
+  it "#extract_creds should be able to return a hash of the credentials" do
+    credential_hash ={:name => 'bar', :access_key => 'a', :secret_key => 'b' }
+    credential = Puppet::Type.type(:aws_credential).new(credential_hash)
+
+    described_class.extract_creds(credential).should eq(
+      { :name => 'bar', :access_key_id => 'a', :secret_access_key => 'b' }
+    )
+  end
+
+
   context "with credentials in the catalog" do
     let(:credentials) {[
       {:name => 'bar', :access_key => 'a', :secret_key => 'a'},
@@ -26,12 +36,13 @@ describe provider_class do
       end
       catalog.add_resource type_class.new(params)
     end
+
     it "should receive an array of credentials as an argument to instances" do
       blah = double('object')
       expect(blah).to receive(:catalog).and_return(catalog)
       described_class.should_receive(:instances) do |arg1|
         cred_names = []
-        arg1.each {|x| cred_names << x.name}
+        arg1.each {|x| cred_names << x[:name]}
         cred_names.sort.should eq(['bar', 'foo'])
         []
       end
