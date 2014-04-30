@@ -20,7 +20,7 @@ Puppet::Type.type(:aws_cgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   end
   def self.instances
     regions.collect do |region_name|
-      ec2.regions[region_name].customer_gateways.collect { |item| new_from_aws(region_name,item) }
+      ec2.regions[region_name].customer_gateways.reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(region_name,item) }
     end.flatten
   end
   [:ip_address, :bgp_asn, :region, :type].each do |ro_method|
