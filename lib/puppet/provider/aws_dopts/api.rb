@@ -3,7 +3,7 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
 
-  def self.new_from_aws(region_name, item)
+  def self.new_from_aws(region_name, item, account)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     c = item.configuration
@@ -18,13 +18,19 @@ Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_a
       :ntp_servers          => c[:ntp_servers],
       :domain_name_servers  => c[:domain_name_servers],
       :netbios_name_servers => c[:netbios_name_servers],
-      :netbios_node_type    => c[:netbios_node_type].to_s
+      :netbios_node_type    => c[:netbios_node_type].to_s,
+      :account => account
     )
   end
   def self.instances(creds=nil)
-    regions.collect do |region_name|
-      ec2.regions[region_name].dhcp_options.collect { |item| new_from_aws(region_name,item) }
-    end.flatten
+    instance_array = []
+    regions.each do |region_name|
+      creds.each do |cred|
+        keys = cred.reject {|k,v| k == :name}
+        instance_array << ec2(keys).regions[region_name].dhcp_options.collect { |item| new_from_aws(region_name,item,cred[:name]) }
+      end
+    end
+    instance_array.flatten
   end
   [:domain_name, :ntp_servers, :netbios_name_servers, :netbios_node_type].each do |ro_method|
     define_method("#{ro_method}=") do |v|
