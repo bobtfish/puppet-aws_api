@@ -5,8 +5,6 @@ module Puppet_X
   end
 end
 
-class ItWorkedError < Exception; end
-
 class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   HAVE_AWS_SDK = begin; require 'aws-sdk'; true; rescue Exception; false; end
 
