@@ -36,7 +36,10 @@ Puppet::Type.type(:aws_cgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   end
   def create
     begin
-      cgw = ec2.regions[resource[:region]].customer_gateways.create(resource[:bgp_asn].to_i, resource[:ip_address])
+      fail "Cannot create aws_cgw #{resource[:title]} without a region" unless resource[:region]
+      region = ec2.regions[resource[:region]]
+      fail "Cannot find region '#{resource[:region]} for resource #{resource[:title]}" unless region
+      cgw = region.customer_gateways.create(resource[:bgp_asn].to_i, resource[:ip_address])
       tag_with_name cgw, resource[:name]
       tags = resource[:tags] || {}
       tags.each { |k,v| cgw.add_tag(k, :value => v) }
