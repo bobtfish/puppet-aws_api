@@ -40,7 +40,10 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     end
   end
   def dhcp_options=(value)
-    @property_hash[:aws_item].dhcp_options = find_dhopts_item_by_name(value).id
+    dopts = find_dhopts_item_by_name(value)
+    fail("Could not find dhcp options named '#{value}'") unless dopts
+    @property_hash[:aws_item].dhcp_options = dopts.id
+    @property_hash[:dhcp_options] = value
   end
   def create
     begin
