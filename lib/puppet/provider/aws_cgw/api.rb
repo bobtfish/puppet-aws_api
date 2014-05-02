@@ -24,7 +24,7 @@ Puppet::Type.type(:aws_cgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     regions.each do |region_name|
       creds.each do |cred|
         keys = cred.reject {|k,v| k == :name}
-        instance_array << ec2(keys).regions[region_name].customer_gateways.collect { |item| new_from_aws(region_name,item,cred[:name]) }
+        instance_array << ec2(keys).regions[region_name].customer_gateways..reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(region_name,item,cred[:name]) }
       end
     end
     instance_array.flatten
