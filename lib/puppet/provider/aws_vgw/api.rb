@@ -21,7 +21,7 @@ Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   end
   def self.instances(creds=nil)
     regions.collect do |region_name|
-      ec2.regions[region_name].vpn_gateways.collect { |item| new_from_aws(item) }
+      ec2.regions[region_name].vpn_gateways.reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(item) }
     end.flatten
   end
   [:region].each do |ro_method|
