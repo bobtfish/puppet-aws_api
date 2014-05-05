@@ -3,7 +3,7 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
 
-  def self.new_from_aws(region_name, item)
+  def self.new_from_aws(region_name, item, account)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     new(
@@ -23,7 +23,8 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
           :origin => route.origin,
           :network_interface => name_or_id(route.network_interface),
           :internet_gateway => name_or_id(route.internet_gateway)
-        }.reject { |k, v| v.nil? } }
+        }.reject { |k, v| v.nil? } },
+      :account          => account
     )
   end
   [:vpc, :subnets, :routes].each do |ro_method|
@@ -33,7 +34,10 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
   end
   def self.instances(creds=nil)
     regions.collect do |region_name|
-      ec2.regions[region_name].route_tables.collect { |item| new_from_aws(region_name,item) }
+      creds.collect do |cred|
+        keys = cred.reject {|k,v| k==:name}
+        ec2(keys).regions[region_name].route_tables.collect { |item| new_from_aws(region_name,item,cred[:name]) }
+      end.flatten
     end.flatten
   end
   def exists?
