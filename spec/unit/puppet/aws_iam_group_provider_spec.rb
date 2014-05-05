@@ -1,7 +1,7 @@
 #!/usr/bin/env rspec
 require 'spec_helper'
 
-provider_class = Puppet::Type.type(:aws_iam_user).provider(:api)
+provider_class = Puppet::Type.type(:aws_iam_group).provider(:api)
 
 describe provider_class do
   context "with 2 resources in 2 accounts" do
@@ -13,7 +13,7 @@ describe provider_class do
     ]}
     let(:iam_mock) {
       iam_mock = double 'object'
-      iam_mock.stub_chain('users').and_return(two_iams)
+      iam_mock.stub_chain('groups').and_return(two_iams)
       iam_mock
     }
 
