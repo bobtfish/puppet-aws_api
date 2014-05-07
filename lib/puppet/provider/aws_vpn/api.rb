@@ -27,7 +27,7 @@ Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   end
   def self.instances(creds=nil)
     regions.collect do |region_name|
-      ec2.regions[region_name].vpn_connections..reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(region_name,item) }
+      ec2.regions[region_name].vpn_connections.reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(region_name,item) }
     end.flatten
   end
   [:region].each do |ro_method|
