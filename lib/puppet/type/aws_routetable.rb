@@ -17,6 +17,6 @@ Puppet::Type.newtype(:aws_routetable) do
     end
     res.each { |r| requires << r[:name] }
   end
-  newproperty:account
+  newproperty(:account)
 end
 
