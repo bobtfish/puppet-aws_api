@@ -94,10 +94,10 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     self.class.ec2(get_creds)
   end
 
-  def self.regions
+  def self.regions(keys)
     @@regions ||= begin
       if HAVE_AWS_SDK
-        ec2.regions.collect { |r| r.name }
+        ec2(keys).regions.collect { |r| r.name }
       else
         []
       end
@@ -105,7 +105,7 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def regions
-    self.class.regions
+    self.class.regions(get_creds)
   end
 
   def tags=(newtags)

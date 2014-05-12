@@ -31,9 +31,11 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     )
   end
   def self.instances(creds=nil)
-    regions.collect do |region_name|
-      creds.collect do |cred|
-        keys = cred.reject {|k,v| k==:name}
+    region_list = nil
+    creds.collect do |cred|
+      keys = cred.reject {|k,v| k == :name}
+      region_list ||= regions(keys)
+      region_list.collect do |region_name|
         vpcs_for_region(region_name, keys).collect { |item| new_from_aws(region_name, item, cred[:name]) }
       end.flatten
     end.flatten

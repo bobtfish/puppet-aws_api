@@ -20,14 +20,14 @@ Puppet::Type.type(:aws_cgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     )
   end
   def self.instances(creds=nil)
-    instance_array = []
-    regions.each do |region_name|
-      creds.each do |cred|
-        keys = cred.reject {|k,v| k == :name}
-        instance_array << ec2(keys).regions[region_name].customer_gateways.collect { |item| new_from_aws(region_name,item,cred[:name]) }
-      end
-    end
-    instance_array.flatten
+    region_list = nil
+    creds.collect do |cred|
+      keys = cred.reject {|k,v| k == :name}
+      region_list ||= regions(keys)
+      region_list.collect do |region_name|
+        ec2(keys).regions[region_name].customer_gateways.collect { |item| new_from_aws(region_name,item,cred[:name]) }
+      end.flatten
+    end.flatten
   end
   [:ip_address, :bgp_asn, :region, :type].each do |ro_method|
     define_method("#{ro_method}=") do |v|

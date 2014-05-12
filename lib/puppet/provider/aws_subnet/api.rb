@@ -25,9 +25,11 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
     )
   end
   def self.instances(creds=nil)
-    regions.collect do |region_name|
-      creds.collect do |cred|
-        keys = cred.reject {|k,v| k == :name }
+    region_list = nil
+    creds.collect do |cred|
+      keys = cred.reject {|k,v| k == :name}
+      region_list ||= regions(keys)
+      region_list.collect do |region_name|
         vpcs_for_region(region_name, keys).collect do |vpc|
           vpc_name = name_or_id vpc
           vpc.subnets.collect do |item|
