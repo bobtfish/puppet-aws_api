@@ -88,14 +88,6 @@ Puppet::Type.newtype(:aws_resources) do
 
   newparam(:account) do
     desc "The namevar of the credentials that need to be used to perform prefetch."
-    validate do |name|
-      found = false
-      catalog.resources.find_all do |r|
-        break if found
-        found = true if r.is_a?(Puppet::Type.type(:aws_credential)) && r[:name] == name
-      end
-      found
-    end
   end
 
 
@@ -119,9 +111,8 @@ Puppet::Type.newtype(:aws_resources) do
   # Generate any new resources we need to manage.  This is pretty hackish
   # right now, because it only supports purging.
   def generate
-
     credentials = catalog.resources.find_all do |r|
-      r.is_a?(Puppet::Type.type(:aws_credential)) && r[:name] == @resource[:account]
+      r.is_a?(Puppet::Type.type(:aws_credential)) && r[:name] == self[:account]
     end.first
 
     return [] unless self.purge?
