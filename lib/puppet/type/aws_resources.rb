@@ -116,7 +116,7 @@ Puppet::Type.newtype(:aws_resources) do
     end.first
 
     return [] unless self.purge?
-    resource_type.instances([{:access_key => credentials[:access_key], :secret_key => credentials[:secret_key]}]).
+    resource_type.instances([{:name => credentials[:name], :access_key_id => credentials[:access_key], :secret_access_key => credentials[:secret_key]}]).
       reject { |r| catalog.resource_refs.include? r.ref }.
       select { |r| check(r) }.
       select { |r| r.class.validproperty?(:ensure) }.
