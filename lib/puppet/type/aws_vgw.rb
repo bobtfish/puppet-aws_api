@@ -19,5 +19,12 @@ Puppet::Type.newtype(:aws_vgw) do
     res.each { |r| requires << r[:name] }
   end
   newproperty:account
+  def self.instances(*args)
+    self.provider(:api).instances(*args).collect do |instance|
+      result = new(:name => instance.name, :provider => instance)
+      properties.each { |name| result.newattr(name) }
+      result
+    end.flatten
+  end
 end
 
