@@ -47,10 +47,11 @@ describe provider_class do
 
     before :each do
       provider_class.should_receive(:regions).and_return(two_regions)
-      expect(provider_class).to receive(:new_from_aws) do |a1, a2, a3|
+      expect(provider_class).to receive(:new_from_aws) do |a1, a2, a3, a4|
         [:region1, :region2].include?(a1).should be(true)
         [:vpc1, :vpc2].include?(a2).should be(true)
         ['a', 'x'].include?(a3).should be(true)
+        two_accounts.collect {|x| x.reject {|k, v| k==:name}}.include?(a4).should be(true)
         :blah
       end.at_least(:once)
     end

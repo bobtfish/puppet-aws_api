@@ -113,10 +113,10 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     @property_hash[:tags] = newtags
   end
 
-  def self.find_dhopts_item_by_name(name)
+  def self.find_dhopts_item_by_name(name, keys)
     @@dhoptions ||= begin
-      regions.collect do |region_name|
-        ec2.regions[region_name].dhcp_options.to_a
+      regions(keys).collect do |region_name|
+        ec2(keys).regions[region_name].dhcp_options.to_a
       end.flatten
     end
     @@dhoptions.find do |dopt|

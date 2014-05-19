@@ -9,10 +9,10 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   def vpcs_for_region(region)
     self.class.vpcs_for_region region
   end
-  def self.new_from_aws(region_name, item, account)
+  def self.new_from_aws(region_name, item, account, keys)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
-    dopts_item = find_dhopts_item_by_name item.dhcp_options_id
+    dopts_item = find_dhopts_item_by_name item.dhcp_options_id keys
     dopts_name = nil
     if dopts_item
       dopts_name = name_or_id dopts_item
@@ -36,7 +36,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       keys = cred.reject {|k,v| k == :name}
       region_list ||= regions(keys)
       region_list.collect do |region_name|
-        vpcs_for_region(region_name, keys).collect { |item| new_from_aws(region_name, item, cred[:name]) }
+        vpcs_for_region(region_name, keys).collect { |item| new_from_aws(region_name, item, cred[:name], keys) }
       end.flatten
     end.flatten
   end
