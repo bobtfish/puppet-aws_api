@@ -56,7 +56,7 @@ describe type_class do
     end
     it "should pass credentials to instances" do
       expect(@managed_resource).to receive(:instances) do |arg|
-        arg.should eq(@creds.reject {|k, v| k==:name})
+        arg.should eq([{:name => 'bleh', :access_key_id => 'a', :secret_access_key => 'b'}])
         []
       end
       @res.generate.should eq []
