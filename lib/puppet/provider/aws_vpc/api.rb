@@ -12,7 +12,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   def self.new_from_aws(region_name, item, account, keys)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
-    dopts_item = find_dhopts_item_by_name item.dhcp_options_id keys
+    dopts_item = find_dhopts_item_by_name item.dhcp_options_id, keys
     dopts_name = nil
     if dopts_item
       dopts_name = name_or_id dopts_item
