@@ -13,7 +13,7 @@ describe provider_class do
     ]}
     let(:ec2_mock) {
       ec2_mock = double 'object'
-      ec2_mock.stub_chain('regions.[].customer_gateways').and_return(two_gateways)
+      ec2_mock.stub_chain('regions.[].customer_gateways.reject').and_return(two_gateways)
       ec2_mock
     }
 

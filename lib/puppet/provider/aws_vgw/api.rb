@@ -27,7 +27,7 @@ Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       keys = cred.reject {|k,v| k == :name}
       region_list ||= regions(keys)
       region_list.collect do |region_name|
-        ec2(keys).regions[region_name].vpn_gateways.reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(item, region_name, account) }
+        ec2(keys).regions[region_name].vpn_gateways.reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(item, region_name, cred[:name]) }
       end.flatten
     end.flatten
   end

@@ -13,15 +13,16 @@ describe provider_class do
     ]}
     let(:ec2_mock) {
       ec2_mock = double 'object'
-      ec2_mock.stub_chain('regions.[].vpn_gateways').and_return(two_gateways)
+      ec2_mock.stub_chain('regions.[].vpn_gateways.reject').and_return(two_gateways)
       ec2_mock
     }
 
     before :each do
       provider_class.should_receive(:regions).and_return(two_regions)
-      expect(provider_class).to receive(:new_from_aws) do |a1, a2|
+      expect(provider_class).to receive(:new_from_aws) do |a1, a2, a3|
         [:gateway1, :gateway2].include?(a1).should be(true)
-        ['a', 'x'].include?(a2).should be(true)
+        [:region1, :region2].include?(a2).should be(true)
+        ['a', 'x'].include?(a3).should be(true)
         :blah
       end.at_least(:once)
     end

@@ -13,7 +13,7 @@ describe provider_class do
     ]}
     let(:ec2_mock) {
       ec2_mock = double 'object'
-      ec2_mock.stub_chain('regions.[].vpn_connections').and_return(two_vpns)
+      ec2_mock.stub_chain('regions.[].vpn_connections.reject').and_return(two_vpns)
       ec2_mock
     }
 
