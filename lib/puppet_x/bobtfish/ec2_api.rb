@@ -126,7 +126,7 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def find_dhopts_item_by_name(name)
-    self.class.find_dhopts_item_by_name(name)
+    self.class.find_dhopts_item_by_name(name, get_creds)
   end
 
   def find_vpc_item_by_name(name)
@@ -142,11 +142,11 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def find_region_name_for_vpc_name(name)
-    self.class.find_region_name_for_vpc_name(name)
+    self.class.find_region_name_for_vpc_name(name, get_creds)
   end
-  def self.find_region_name_for_vpc_name(name)
-    regions.find do |region_name|
-      ec2.regions[region_name].vpcs.find do |vpc|
+  def self.find_region_name_for_vpc_name(name, keys)
+    regions(keys).find do |region_name|
+      ec2(keys).regions[region_name].vpcs.find do |vpc|
         vpc_name = vpc.tags.to_h['Name'] || vpc.vpc_id
         vpc_name == name
       end
