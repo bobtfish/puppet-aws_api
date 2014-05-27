@@ -3,7 +3,7 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
 
-  def self.new_from_aws(region_name, item)
+  def self.new_from_aws(region_name, item, account)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     cgw_name = nil
@@ -22,7 +22,8 @@ Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :vgw              => vgw_name,
       :region           => region_name,
       :ensure           => :present,
-      :tags             => tags
+      :tags             => tags,
+      :account          => account
     )
   end
   def self.instances(creds=nil)
