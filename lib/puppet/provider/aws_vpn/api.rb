@@ -12,7 +12,7 @@ Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     end
     vgw_name = nil
     if item.vpn_gateway
-      vpn_name = name_or_id item.vpn_gateway
+      vgw_name = name_or_id item.vpn_gateway
     end
     new(
       :aws_item         => item,
