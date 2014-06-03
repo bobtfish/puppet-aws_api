@@ -47,17 +47,19 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def get_creds
-    if resource
-      account = resource[:account]
-      cred = resource.catalog.resources.find_all do |r|
-        r.is_a?(Puppet::Type.type(:aws_credential)) && r.name == account
-      end.first
-    end
-    if cred == nil
-      puts "Account supplied did not match any in the catalog, falling back to defaults"
-      self.class.default_creds
-    else
-      {:access_key_id => cred[:access_key], :secret_access_key => cred[:secret_key]}
+    @creds ||= begin
+      if resource
+        account = resource[:account]
+        cred = resource.catalog.resources.find_all do |r|
+          r.is_a?(Puppet::Type.type(:aws_credential)) && r.name == account
+        end.first
+      end
+      if cred == nil
+        puts "Account supplied did not match any in the catalog, falling back to defaults"
+        self.class.default_creds
+      else
+        {:access_key_id => cred[:access_key], :secret_access_key => cred[:secret_key]}
+      end
     end
   end
 
