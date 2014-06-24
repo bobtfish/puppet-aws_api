@@ -10,7 +10,7 @@ Puppet::Type.newtype(:aws_test_creds) do
   end
   newproperty(:account)
   def self.instances(*args)
-    self.provider(:api).instances(*args).collect do |instance|
+    self.provider(:test).instances(*args).collect do |instance|
       result = new(:name => instance.name, :provider => instance)
       properties.each { |name| result.newattr(name) }
       result

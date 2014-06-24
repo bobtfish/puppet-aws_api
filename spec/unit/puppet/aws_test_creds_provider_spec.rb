@@ -86,6 +86,13 @@ describe type_class do
       provider.get_creds.should eq({
         :access_key_id => "foo", :secret_access_key => "bar"})
     end
+    it "should return the same credentials twice" do
+      lambda { provider.create }.should_not raise_error
+      provider.get_creds.should eq({
+        :access_key_id => "foo", :secret_access_key => "bar"})
+      provider.get_creds.should eq({
+        :access_key_id => "foo", :secret_access_key => "bar"})
+    end
   end
   context "with wrong redentials referenced" do
     it "should use the default credentials" do
@@ -113,11 +120,12 @@ describe type_class do
       {:name => 'bar', :access_key => 'a', :secret_key => 'a'},
       {:name => 'foo', :access_key => 'b', :secret_key => 'b'},
     ]}
+    let(:instance) {described_class.new(params)}
     before :each do 
       credentials.each do |cred| 
         catalog.add_resource(Puppet::Type.type(:aws_credential).new(cred))
       end
-      catalog.add_resource described_class.new(params)
+      catalog.add_resource instance
     end
 
     it "should be able to extract resources from the catalog by account" do
@@ -126,6 +134,18 @@ describe type_class do
       end
       res.count.should eq(1)
       res[0].name.should eq('baz')
+    end
+    it "should be able to create" do
+      instance.provider.create
+    end
+    it "should be able to use instance method get_creds and creds are cached" do
+      instance.provider.get_creds.should eq({:access_key_id => 'a',
+                                             :secret_access_key => 'a'})
+      # This tests that they are cached as they should be
+      instance.provider.creds.should eq({:access_key_id => 'a',
+                                          :secret_access_key => 'a'})
+      instance.provider.get_creds.should eq({:access_key_id => 'a',
+                                    :secret_access_key => 'a'})
     end
   end
 end
