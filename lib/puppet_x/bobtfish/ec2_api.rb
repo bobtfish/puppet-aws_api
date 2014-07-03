@@ -2,6 +2,8 @@ require 'rubygems'
 
 module Puppet_X
   module Bobtfish
+    class NoCredentialsError < Exception
+    end
   end
 end
 
@@ -55,7 +57,7 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
         end.first
       end
       if cred == nil
-        puts "Account supplied did not match any in the catalog, falling back to defaults"
+        warn "Account supplied did not match any in the catalog, falling back to defaults"
         self.class.default_creds
       else
         {:access_key_id => cred[:access_key], :secret_access_key => cred[:secret_key]}
@@ -72,10 +74,14 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def self.default_creds
-    {
+    creds = {
       :access_key_id => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']), 
       :secret_access_key => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY'])
     }
+    unless creds.fetch(:access_key_id) {nil} and creds.fetch(:secret_access_key) {nil}
+      raise Puppet_X::Bobtfish::NoCredentialsError, "No suitable aws credentials were found"
+    end
+    creds
   end
 
   def self.amazon_thing(which, creds=self.default_creds)

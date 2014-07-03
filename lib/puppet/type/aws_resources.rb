@@ -114,6 +114,13 @@ Puppet::Type.newtype(:aws_resources) do
     credentials = catalog.resources.find_all do |r|
       r.is_a?(Puppet::Type.type(:aws_credential)) && r[:name] == self[:account]
     end.first
+    
+    if credentials == nil
+      warn "[Warning]: Falling back to default (environment) credentials"
+      credentials = Puppet_X::Bobtfish::Ec2_api.default_creds
+      credentials[:name] = self[:account]
+    end
+    err credentials.inspect
 
     return [] unless self.purge?
     resource_type.instances([{:name => credentials[:name], :access_key_id => credentials[:access_key], :secret_access_key => credentials[:secret_key]}]).
