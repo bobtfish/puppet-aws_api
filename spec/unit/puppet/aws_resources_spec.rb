@@ -12,8 +12,8 @@ describe type_class do
     end
 
     describe "#generate" do
-      it "should not throw any exceptions" do
-        @res.generate
+      it "should throw an exception" do
+        lambda { @res.generate }.should raise_error
       end
     end
   end
@@ -22,7 +22,7 @@ describe type_class do
       creds = {:name => 'bleh', :access_key => 'a', :secret_key => 'b'}
       @catalog = Puppet::Resource::Catalog.new
       cred = Puppet::Type.type(:aws_credential).new(creds)
-      cred.catalog = @catalog
+      @catalog.add_resource cred
     end
 
     describe "#new" do
