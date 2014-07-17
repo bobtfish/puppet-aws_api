@@ -71,10 +71,10 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     self.class.ec2()
   end
 
-  def self.regions(keys)
+  def self.regions
     @@regions ||= begin
       if HAVE_AWS_SDK
-        ec2(keys).regions.collect { |r| r.name }
+        ec2.regions.collect { |r| r.name }
       else
         []
       end
@@ -146,3 +146,4 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     @property_hash[:vpc] = vpc_name
   end
 end
+
