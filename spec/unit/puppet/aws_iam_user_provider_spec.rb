@@ -7,10 +7,6 @@ describe provider_class do
   context "with 2 resources in 2 accounts" do
     let(:two_iams) {[:iam1, :iam2]}
     let(:two_regions) { [:region1, :region2] }
-    let(:two_accounts) {[
-      {:name => 'a', :access_key_id => 'b', :secret_access_key => 'c' },
-      {:name => 'x', :access_key_id => 'y', :secret_access_key => 'z' }
-    ]}
     let(:iam_mock) {
       iam_mock = double 'object'
       iam_mock.stub_chain('users').and_return(two_iams)
@@ -18,25 +14,21 @@ describe provider_class do
     }
 
     before :each do
-      expect(provider_class).to receive(:new_from_aws) do |a1, a2|
+      expect(provider_class).to receive(:new_from_aws) do |a1|
         [:iam1, :iam2].include?(a1).should be(true)
-        ['a', 'x'].include?(a2).should be(true)
         :blah
       end.at_least(:once)
     end
 
-    it "should find 4 instances" do
+    it "should find 2 instances" do
       provider_class.should_receive(:iam).at_least(:once).and_return(iam_mock)
-      provider_class.instances(two_accounts).count.should eq(4)
+      provider_class.instances.count.should eq(2)
     end
     it "should send a key hash to the iam method" do
-      expect(provider_class).to receive(:iam) do |arg|
-        arg.each_key do |k|
-          [:access_key_id, :secret_access_key].include?(k).should be(true)
-        end
+      expect(provider_class).to receive(:iam) do
         iam_mock
       end.at_least(:once)
-      provider_class.instances(two_accounts).count.should eq(4)
+      provider_class.instances.count.should eq(2)
     end
   end
 end

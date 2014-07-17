@@ -3,13 +3,13 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
 
-  def self.vpcs_for_region(region, keys)
-    ec2(keys).regions[region].vpcs
+  def self.vpcs_for_region(region)
+    ec2.regions[region].vpcs
   end
   def vpcs_for_region(region)
     self.class.vpcs_for_region region
   end
-  def self.new_from_aws(vpc_id, item, account)
+  def self.new_from_aws(vpc_id, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     new(
@@ -21,21 +21,15 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
       :cidr     => item.cidr_block,
       :az       => item.availability_zone_name,
       :tags     => tags.to_hash,
-      :account  => account
     )
   end
-  def self.instances(creds=nil)
-    region_list = nil
-    creds.collect do |cred|
-      keys = cred.reject {|k,v| k == :name}
-      region_list ||= regions(keys)
-      region_list.collect do |region_name|
-        vpcs_for_region(region_name, keys).collect do |vpc|
-          vpc_name = name_or_id vpc
-          vpc.subnets.collect do |item|
-            new_from_aws(vpc_name, item, cred[:name])
-          end
-        end.flatten
+  def self.instances
+    regions.collect do |region_name|
+      vpcs_for_region(region_name).collect do |vpc|
+        vpc_name = name_or_id vpc
+        vpc.subnets.collect do |item|
+          new_from_aws(vpc_name, item)
+        end
       end.flatten
     end.flatten
   end

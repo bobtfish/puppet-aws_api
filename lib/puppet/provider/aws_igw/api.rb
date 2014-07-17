@@ -3,7 +3,7 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
 
-  def self.new_from_aws(item, account)
+  def self.new_from_aws(item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     vpc_name = nil
@@ -17,17 +17,11 @@ Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :vpc              => vpc_name,
       :ensure           => :present,
       :tags             => tags,
-      :account          => account
     )
   end
-  def self.instances(creds=nil)
-    region_list = nil
-    creds.collect do |cred|
-      keys = cred.reject {|k,v| k == :name}
-      region_list ||= regions(keys)
-      region_list.collect do |region_name|
-        ec2(keys).regions[region_name].internet_gateways.collect { |item| new_from_aws(item,cred[:name]) }
-      end.flatten
+  def self.instances
+    regions.collect do |region_name|
+      ec2.regions[region_name].internet_gateways.collect { |item| new_from_aws(item) }
     end.flatten
   end
   def create

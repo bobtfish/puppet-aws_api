@@ -1,4 +1,5 @@
 require 'rubygems'
+require 'puppet'
 
 module Puppet_X
   module Bobtfish
@@ -18,12 +19,7 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def self.prefetch(resources)
-    catalog = resources.values.first.catalog
-    creds = catalog.resources.find_all do |r|
-      r.is_a?(Puppet::Type.type(:aws_credential))
-    end
-    credential_hashes = creds.collect {|x| extract_creds(x)}
-    instances(credential_hashes).each do |provider|
+    instances.each do |provider|
       if resource = resources[provider.name] then
         resource.provider = provider
       end
@@ -47,28 +43,7 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def get_creds
-    @creds ||= begin
-      if resource
-        account = resource[:account]
-        cred = resource.catalog.resources.find_all do |r|
-          r.is_a?(Puppet::Type.type(:aws_credential)) && r.name == account
-        end.first
-      end
-      if cred == nil
-        puts "Account supplied did not match any in the catalog, falling back to defaults"
-        self.class.default_creds
-      else
-        {:access_key_id => cred[:access_key], :secret_access_key => cred[:secret_key]}
-      end
-    end
-  end
-
-  def self.extract_creds(cred_resource)
-    {
-      :name => cred_resource[:name],
-      :access_key_id => cred_resource[:access_key], 
-      :secret_access_key => cred_resource[:secret_key]
-    }
+    self.class.default_creds
   end
 
   def self.default_creds
@@ -78,22 +53,22 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     }
   end
 
-  def self.amazon_thing(which, creds=self.default_creds)
-    which.new(creds)
+  def self.amazon_thing(which)
+    which.new
   end
 
-  def self.iam(creds=default_creds)
-    amazon_thing(AWS::IAM, creds)
+  def self.iam()
+    amazon_thing(AWS::IAM)
   end
   def iam
-    self.class.iam(get_creds)
+    self.class.iam()
   end
 
-  def self.ec2(creds=default_creds)
-    amazon_thing(AWS::EC2, creds)
+  def self.ec2()
+    amazon_thing(AWS::EC2)
   end
   def ec2
-    self.class.ec2(get_creds)
+    self.class.ec2()
   end
 
   def self.regions(keys)
@@ -107,7 +82,7 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def regions
-    self.class.regions(get_creds)
+    self.class.regions()
   end
 
   def tags=(newtags)
@@ -115,10 +90,10 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     @property_hash[:tags] = newtags
   end
 
-  def self.find_dhopts_item_by_name(name, keys)
+  def self.find_dhopts_item_by_name(name)
     @@dhoptions ||= begin
-      regions(keys).collect do |region_name|
-        ec2(keys).regions[region_name].dhcp_options.to_a
+      regions.collect do |region_name|
+        ec2.regions[region_name].dhcp_options.to_a
       end.flatten
     end
     @@dhoptions.find do |dopt|
@@ -128,7 +103,7 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def find_dhopts_item_by_name(name)
-    self.class.find_dhopts_item_by_name(name, get_creds)
+    self.class.find_dhopts_item_by_name(name)
   end
 
   def find_vpc_item_by_name(name)
@@ -144,7 +119,7 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def find_region_name_for_vpc_name(name)
-    self.class.find_region_name_for_vpc_name(name, get_creds)
+    self.class.find_region_name_for_vpc_name(name)
   end
   def self.find_region_name_for_vpc_name(name, keys)
     regions(keys).find do |region_name|

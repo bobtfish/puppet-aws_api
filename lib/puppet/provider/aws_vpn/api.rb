@@ -3,7 +3,7 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
 
-  def self.new_from_aws(region_name, item, account)
+  def self.new_from_aws(region_name, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     cgw_name = nil
@@ -23,17 +23,11 @@ Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :region           => region_name,
       :ensure           => :present,
       :tags             => tags,
-      :account          => account
     )
   end
-  def self.instances(creds=nil)
-    region_list = nil
-    creds.collect do |cred|
-      keys = cred.reject {|k,v| k == :name}
-      region_list ||= regions(keys)
-      region_list.collect do |region_name|
-        ec2(keys).regions[region_name].vpn_connections.reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(region_name,item,cred[:name]) }
-      end.flatten
+  def self.instances
+    regions.collect do |region_name|
+      ec2.regions[region_name].vpn_connections.reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(region_name,item) }
     end.flatten
   end
   [:region].each do |ro_method|

@@ -3,7 +3,7 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
 
-  def self.new_from_aws(region_name, item, account)
+  def self.new_from_aws(region_name, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     new(
@@ -24,7 +24,6 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
           :network_interface => name_or_id(route.network_interface),
           :internet_gateway => name_or_id(route.internet_gateway)
         }.reject { |k, v| v.nil? } },
-      :account          => account
     )
   end
   [:vpc, :subnets, :routes].each do |ro_method|
@@ -32,14 +31,9 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
       fail "Cannot manage #{ro_method} is read-only in this version of the module.."
     end
   end
-  def self.instances(creds=nil)
-    region_list = nil
-    creds.collect do |cred|
-      keys = cred.reject {|k,v| k == :name}
-      region_list ||= regions(keys)
-      region_list.collect do |region_name|
-        ec2(keys).regions[region_name].route_tables.collect { |item| new_from_aws(region_name,item,cred[:name]) }
-      end.flatten
+  def self.instances
+    regions.collect do |region_name|
+      ec2.regions[region_name].route_tables.collect { |item| new_from_aws(region_name,item) }
     end.flatten
   end
   def exists?

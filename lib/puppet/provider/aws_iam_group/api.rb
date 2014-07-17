@@ -3,7 +3,7 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_iam_group).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
 
-  def self.new_from_aws(item, account)
+  def self.new_from_aws(item)
     policies = Hash[item.policies.to_h.map { |k,v| [k,v.to_h] }]
     new(
       :aws_item         => item,
@@ -12,14 +12,10 @@ Puppet::Type.type(:aws_iam_group).provide(:api, :parent => Puppet_X::Bobtfish::E
       :arn              => item.arn,
       :ensure           => :present,
       :policies         => policies,
-      :account          => account
     )
   end
-  def self.instances(creds=nil)
-    creds.collect do |cred|
-      keys = cred.reject {|k,v| k==:name}
-      iam(keys).groups.collect { |item| new_from_aws(item, cred[:name]) }
-    end.flatten
+  def self.instances
+    iam.groups.collect { |item| new_from_aws(item) }
   end
   [:arn, :name].each do |ro_method|
     define_method("#{ro_method}=") do |v|

@@ -4,7 +4,7 @@ require 'set'
 Puppet::Type.type(:aws_iam_user).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
 
-  def self.new_from_aws(item, account)
+  def self.new_from_aws(item)
     new(
       :aws_item         => item,
       :name             => item.name,
@@ -13,14 +13,10 @@ Puppet::Type.type(:aws_iam_user).provide(:api, :parent => Puppet_X::Bobtfish::Ec
       :path             => item.path,
       :groups           => item.groups.map { |g| g.name },
       :ensure           => :present,
-      :account          => :name
     )
   end
-  def self.instances(creds=nil)
-    creds.collect do |cred|
-      keys = cred.reject {|k,v| k==:name}
-      iam(keys).users.collect { |item| new_from_aws(item, cred[:name]) }
-    end.flatten
+  def self.instances
+    iam.users.collect { |item| new_from_aws(item) }
   end
   [:arn, :path, :name].each do |ro_method|
     define_method("#{ro_method}=") do |v|
