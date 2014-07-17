@@ -121,9 +121,9 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   def find_region_name_for_vpc_name(name)
     self.class.find_region_name_for_vpc_name(name)
   end
-  def self.find_region_name_for_vpc_name(name, keys)
-    regions(keys).find do |region_name|
-      ec2(keys).regions[region_name].vpcs.find do |vpc|
+  def self.find_region_name_for_vpc_name(name)
+    regions.find do |region_name|
+      ec2.regions[region_name].vpcs.find do |vpc|
         vpc_name = vpc.tags.to_h['Name'] || vpc.vpc_id
         vpc_name == name
       end
