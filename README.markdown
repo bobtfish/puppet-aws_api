@@ -46,6 +46,11 @@ need to have the following environment variables setup:
   * AWS_ACCESS_KEY_ID
   * AWS_SECRET_ACCESS_KEY
 
+Alternatively (and recommended) is to run this code from an Amazon machine with an IAM role
+allowing it API access.
+
+**FIXME** - further IAM details here..
+
 ###Beginning with aws_api
 
 Try exploring using puppet resource, in a checkout:
