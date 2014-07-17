@@ -26,7 +26,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :dhcp_options     => dopts_name,
       :instance_tenancy => item.instance_tenancy.to_s,
       :region           => region_name,
-      :tags             => tags,
+      :tags             => tags
     )
   end
   def self.instances

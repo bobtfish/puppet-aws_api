@@ -11,7 +11,7 @@ Puppet::Type.type(:aws_iam_group).provide(:api, :parent => Puppet_X::Bobtfish::E
       :id               => item.id,
       :arn              => item.arn,
       :ensure           => :present,
-      :policies         => policies,
+      :policies         => policies
     )
   end
   def self.instances

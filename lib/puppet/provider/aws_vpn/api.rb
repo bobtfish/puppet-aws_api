@@ -22,7 +22,7 @@ Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :vgw              => vgw_name,
       :region           => region_name,
       :ensure           => :present,
-      :tags             => tags,
+      :tags             => tags
     )
   end
   def self.instances

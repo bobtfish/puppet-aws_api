@@ -18,7 +18,7 @@ Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_a
       :ntp_servers          => c[:ntp_servers],
       :domain_name_servers  => c[:domain_name_servers],
       :netbios_name_servers => c[:netbios_name_servers],
-      :netbios_node_type    => c[:netbios_node_type].to_s,
+      :netbios_node_type    => c[:netbios_node_type].to_s
     )
   end
   def self.instances

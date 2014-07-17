@@ -20,7 +20,7 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
       :vpc      => vpc_id,
       :cidr     => item.cidr_block,
       :az       => item.availability_zone_name,
-      :tags     => tags.to_hash,
+      :tags     => tags.to_hash
     )
   end
   def self.instances

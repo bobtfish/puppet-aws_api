@@ -12,7 +12,7 @@ Puppet::Type.type(:aws_iam_user).provide(:api, :parent => Puppet_X::Bobtfish::Ec
       :arn              => item.arn,
       :path             => item.path,
       :groups           => item.groups.map { |g| g.name },
-      :ensure           => :present,
+      :ensure           => :present
     )
   end
   def self.instances
