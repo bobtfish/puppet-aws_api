@@ -15,7 +15,7 @@ Puppet::Type.type(:aws_cgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :region     => region_name,
       :ip_address => item.ip_address,
       :ensure     => :present,
-      :tags       => tags,
+      :tags       => tags
     )
   end
   def self.instances()
