@@ -24,6 +24,7 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       :subnet           => item.subnet_id,
       :key_name         => item.key_pair.name,
       :tags             => tags,
+      :elastic_ip       => !!item.elastic_ip,
     )
   end
   def self.instances
@@ -41,9 +42,7 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
     profile = iam.client.get_instance_profile(
       :instance_profile_name => resource[:iam_role]
     )
-    puts "Profile: #{profile}"
     subnet = ec2.regions[resource[:region]].subnets.with_tag('Name', resource[:subnet]).first
-    puts "Subnet: #{subnet.inspect}"
     instance = ec2.regions[resource[:region]].instances.create(
       :iam_instance_profile => profile[:arn],
       :image_id             => resource[:image_id],
@@ -51,7 +50,14 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       :subnet               => subnet.id,
       :key_name             => resource[:key_name],
       :associate_public_ip_address => resource[:associate_public_ip_address],
+      :block_device_mappings => resource[:block_device_mappings]
     )
+    if resource[:elastic_ip]
+      elastic_ip = ec2.regions[resource[:region]].elastic_ips.create(
+        :vpc => true,
+      )
+      instance.associate_elastic_ip(elastic_ip)
+    end
     wait_until_status instance, :running
     tag_with_name instance, resource[:name]
     tags = resource[:tags] || {}
