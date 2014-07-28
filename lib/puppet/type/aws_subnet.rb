@@ -12,7 +12,6 @@ Puppet::Type.newtype(:aws_subnet) do
 #  end
   newproperty(:cidr)
   newproperty(:az)
-  newproperty(:route_table)
   newproperty(:tags)
 end
 
