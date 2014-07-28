@@ -1,5 +1,6 @@
 require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'puppet_x', 'bobtfish', 'ec2_api.rb'))
 
+
 Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
 
@@ -15,13 +16,13 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
     vpc = ec2.regions[region_name].vpcs[item.vpc_id]
     get_perms = Proc.new do |perm|
       {
-        :protocol => perm.protocol,
-        :ports => perm.port_range.to_a,
-        :sources => perm.ip_ranges + perm.groups
+        'protocol' => perm.protocol.to_s,
+        'ports' => array_to_puppet(perm.port_range.to_a.map(&:to_s)),
+        'sources' => perm.ip_ranges + perm.groups.map {|s| s.tags['Name']},
       }
     end
-    ingress = item.ingress_ip_permissions.map(&get_perms)
-    egress = item.egress_ip_permissions.map(&get_perms)
+    ingress = array_to_puppet(item.ingress_ip_permissions.map(&get_perms))
+    egress = array_to_puppet(item.egress_ip_permissions.map(&get_perms))
     
     new(
       :aws_item         => item,
@@ -56,9 +57,8 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
   
   def create
     vpc = find_vpc_item_by_name(resource[:vpc])
-    region = find_region_name_for_vpc_name(resource[:vpc])
-    sg = ec2.regions[region].security_groups.create(
-      :name => resource[:name],
+    sg = vpc.security_groups.create(
+      resource[:name],
       :description => resource[:description],
       :vpc => vpc
     )
@@ -81,21 +81,31 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
   private
 
 
-  def get_source
-    Proc.new do |source|
-      if source.is_a? String
-        source
-      else
-        # must be resource
-        source[:aws_item]
-      end
-    end
-  end
-
   def set_rules(sg, method, rules)
+    listing_method_for = {
+      :authorize_ingress => :ingress_ip_permissions,
+      :authorize_egress => :egress_ip_permissions
+    }
+    sg.send(listing_method_for[method]).each do |rule|
+      rule.revoke
+    end
     if rules
-      rules.each do |perm|
-        sg.send(method, perm[:protocol], perm[:ports], perm[:sources].map(&get_source))
+      array_from_puppet(rules).each do |perm|
+        protocol = if perm['protocol'] == 'any'
+          -1 # obviously...
+        else
+          perm['protocol'] 
+        end
+        sg.send method, protocol, perm['ports'], *perm['sources'].map do |source|
+          if source =~ /^\d+\.\d+\.\d+\.\d+\/\d+$/
+            # IP CIDR
+            source
+          else
+            # must be another SG
+            sg.vpc.security_groups.with_tag('Name', source).first
+          end
+        end
+        
       end
     end
   end

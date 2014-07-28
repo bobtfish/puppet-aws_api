@@ -11,8 +11,12 @@ Puppet::Type.newtype(:aws_ec2_instance) do
   newproperty(:tags)
   newparam(:associate_public_ip_address)
   newproperty(:elastic_ip)
-  newproperty(:block_device_mappings)
-  newproperty(:security_groups)
+  newproperty(:block_device_mappings, :array_matching => :all) do
+    defaultto []
+  end
+  newproperty(:security_groups, :array_matching => :all) do
+    defaultto []
+  end
 
   autorequire(:aws_subnet) do
     self[:subnet]
