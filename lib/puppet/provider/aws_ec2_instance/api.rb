@@ -50,7 +50,8 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       :subnet               => subnet.id,
       :key_name             => resource[:key_name],
       :associate_public_ip_address => resource[:associate_public_ip_address],
-      :block_device_mappings => resource[:block_device_mappings]
+      :block_device_mappings => resource[:block_device_mappings],
+      :security_groups => resource[:security_groups].map{|r| r[:aws_item]},
     )
     if resource[:elastic_ip]
       elastic_ip = ec2.regions[resource[:region]].elastic_ips.create(
