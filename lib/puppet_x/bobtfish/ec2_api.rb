@@ -34,6 +34,10 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     self.class.name_or_id(item)
   end
 
+  def wait_until_status(item, status)
+    sleep 1 until item.status == status
+  end
+
   def wait_until_state(item, state)
     sleep 1 until item.state == state
   end
