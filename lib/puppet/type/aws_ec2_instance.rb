@@ -1,3 +1,4 @@
+require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'puppet_x', 'bobtfish', 'list_of_hashes.rb'))
 Puppet::Type.newtype(:aws_ec2_instance) do
   @doc = "Manage AWS EC2 instances"
   newparam(:name)
@@ -11,9 +12,7 @@ Puppet::Type.newtype(:aws_ec2_instance) do
   newproperty(:tags)
   newparam(:associate_public_ip_address)
   newproperty(:elastic_ip)
-  newproperty(:block_device_mappings, :array_matching => :all) do
-    defaultto []
-  end
+  newproperty(:block_device_mappings, :parent => Puppet_X::Bobtfish::ListOfHashesProperty)
   newproperty(:security_groups, :array_matching => :all) do
     defaultto []
   end

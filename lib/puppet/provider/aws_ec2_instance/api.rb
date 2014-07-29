@@ -14,6 +14,17 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
     name = tags.delete('Name') || item.id
     profile = find_instance_profile_by_id(item.iam_instance_profile_id)
     subnet = ec2.regions[region_name].subnets[item.subnet_id]
+
+    block_devices = item.block_device_mappings.to_h.map do |mount, dev|
+      {
+        'device_name' => mount,
+        'ebs' => {
+          'volume_size' => dev.volume.size.to_s,
+          'delete_on_termination' => dev.delete_on_termination,
+          'volume_type' => if dev.volume.iops then 'io1' else 'standard' end # i think this is right?
+        }
+      }
+    end
     new(
       :aws_item         => item,
       :name             => name,
@@ -26,7 +37,9 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       :subnet           => subnet.tags['Name'],
       :key_name         => item.key_pair.name,
       :tags             => tags,
-      :elastic_ip       => !!item.elastic_ip
+      :elastic_ip       => !!item.elastic_ip,
+      :block_device_mappings => block_devices,
+      :security_groups => item.security_groups.collect(&:name)
     )
   end
   def self.instances
@@ -47,11 +60,14 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
     region = ec2.regions[resource[:region]]
     subnet = region.subnets.with_tag('Name', resource[:subnet]).first
 
-    block_devices = array_from_puppet(resource['block_device_mappings']).each do |dev|
+    block_devices = resource['block_device_mappings'].each_with_index do |dev, i|
       # Fun fact: puppet doesn't have an int type
       if dev['ebs'] and dev['ebs']['volume_size']
         dev['ebs']['volume_size'] = dev['ebs']['volume_size'].to_i
       end
+      # Just auto-name, we can't actually get this name back and it pretty much
+      # has to follow this pattern anyway
+      dev['virtual_name'] = "ephemeral#{i}"
     end
 
     instance = region.instances.create(

@@ -12,7 +12,7 @@ Puppet::Type.type(:aws_rrset).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_a
       :name             => name,
       :ensure           => :present,
       :zone             => zone.name,
-      :value            => array_to_puppet(item.resource_records.collect {|r| r[:value]}),
+      :value            => item.resource_records.collect {|r| r[:value]},
       :ttl              => item.ttl.to_s,
     )
   end

@@ -15,14 +15,16 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
     name = tags.delete('Name') || item.id
     vpc = ec2.regions[region_name].vpcs[item.vpc_id]
     get_perms = Proc.new do |perm|
+      ports = perm.port_range.to_a.map(&:to_s)
+      ports = ports[0] if ports.size == 1
       {
         'protocol' => perm.protocol.to_s,
-        'ports' => array_to_puppet(perm.port_range.to_a.map(&:to_s)),
+        'ports' => ports,
         'sources' => perm.ip_ranges + perm.groups.map {|s| s.tags['Name']},
       }
     end
-    ingress = array_to_puppet(item.ingress_ip_permissions.map(&get_perms))
-    egress = array_to_puppet(item.egress_ip_permissions.map(&get_perms))
+    ingress = item.ingress_ip_permissions.map(&get_perms)
+    egress = item.egress_ip_permissions.map(&get_perms)
 
     new(
       :aws_item         => item,
@@ -90,13 +92,14 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
       rule.revoke
     end
     if rules
-      array_from_puppet(rules).each do |perm|
+      puts "The rules: #{rules.inspect}"
+      rules.each do |perm|
         protocol = if perm['protocol'] == 'any'
           -1 # obviously...
         else
           perm['protocol']
         end
-        sg.send method, protocol, perm['ports'], *perm['sources'].map do |source|
+        sources = perm['sources'].map do |source|
           if source =~ /^\d+\.\d+\.\d+\.\d+\/\d+$/
             # IP CIDR
             source
@@ -105,6 +108,7 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
             sg.vpc.security_groups.with_tag('Name', source).first
           end
         end
+        sg.send method, protocol, perm['ports'], *sources
 
       end
     end

@@ -179,33 +179,6 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     @property_hash[:vpc] = vpc_name
   end
 
-  def self.array_to_puppet(arr)
-    if arr == nil
-      return nil
-    elsif arr.size == 1
-      arr[0]
-    else
-      arr
-    end
-  end
-
-  def self.array_from_puppet(arr)
-    if arr.is_a? Array
-      arr
-    elsif arr == nil
-      []
-    else
-      [arr]
-    end
-  end
-
-  def array_to_puppet(arr)
-    self.class.array_to_puppet(arr)
-  end
-
-  def array_from_puppet(arr)
-    self.class.array_from_puppet(arr)
-  end
 
 end
 
