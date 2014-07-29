@@ -13,5 +13,7 @@ Puppet::Type.newtype(:aws_subnet) do
   newproperty(:cidr)
   newproperty(:az)
   newproperty(:tags)
+  # TODO: We are setting this, but it doesn't do anything in the backend
+  newproperty(:route_table)
 end
 
