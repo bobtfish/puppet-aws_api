@@ -30,11 +30,26 @@ Puppet::Type.type(:aws_rrset).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_a
       raise 'AWS resource record set name MUST be in the form of "<type> <name>" - e.g. "CNAME foo.example.com."'
     end
     record_type, record_name = split_name
+    value = resource[:value]
+    if resource[:ec2_instance]
+      unless %w(CNAME A).include?(record_type)
+        raise "ec2_instance option is for CNAME or A record types only"
+      end
+      if value.any?
+        raise "ec2_instance option can't be used at the same time as value"
+      end
+      instance = resource.catalog.resource("Aws_ec2_instance[#{resource[:ec2_instance]}]").provider.aws_item
+      unless instance.elastic_ip and instance.elastic_ip.public_ip
+        raise "ec2_instance reference must have a public Elastic IP"
+      end
+      value = [instance.elastic_ip.public_ip]
+
+    end
     zone.rrsets.create(
       record_name,
       record_type,
       :ttl => resource[:ttl].to_i,
-      :resource_records => resource[:value].map{|v| {:value => v}},
+      :resource_records => value.map{|v| {:value => v}},
     )
   end
   def destroy

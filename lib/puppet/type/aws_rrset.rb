@@ -16,6 +16,13 @@ Puppet::Type.newtype(:aws_rrset) do
     desc "The record value string (array of strings for multiple lines)"
   end
 
+  newparam(:ec2_instance) do
+  	desc "For CNAME and A records only, an aws_ec2_instance name whose Elastic IP will be used in lieu of the value property."
+  end
+  autorequire(:aws_ec2_instance) do
+    self[:ec2_instance]
+  end
+
   newproperty(:ttl) do
   	desc "TTL in seconds"
   end

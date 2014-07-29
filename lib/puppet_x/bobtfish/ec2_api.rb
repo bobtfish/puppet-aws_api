@@ -166,6 +166,10 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     @property_hash[:ensure] == :present
   end
 
+  def aws_item
+    @property_hash[:aws_item]
+  end
+
   def vpc=(vpc_name)
     vpc = find_vpc_item_by_name(vpc_name)
     if vpc.nil?
