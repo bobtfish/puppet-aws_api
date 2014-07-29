@@ -52,7 +52,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       fail("Cannot find dhcp options named '#{resource[:dhcp_options]}'") unless dhopts
       dhopts_name = dhopts.id
     end
-  
+
     vpc = ec2.regions[resource[:region]].vpcs.create(resource[:cidr])
     wait_until_state vpc, :available
     tag_with_name vpc, resource[:name]
@@ -62,7 +62,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       vpc.dhcp_options = dhopts_name
     end
     vpc
-   
+
   end
   def destroy
     @property_hash[:aws_item].delete

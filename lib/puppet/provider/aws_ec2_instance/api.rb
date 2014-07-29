@@ -24,7 +24,7 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       :subnet           => item.subnet_id,
       :key_name         => item.key_pair.name,
       :tags             => tags,
-      :elastic_ip       => !!item.elastic_ip,
+      :elastic_ip       => !!item.elastic_ip
     )
   end
   def self.instances
@@ -37,14 +37,14 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       fail "Cannot manage #{ro_method} is read-only once an instance is created"
     end
   end
-  
+
   def create
     profile = iam.client.get_instance_profile(
       :instance_profile_name => resource[:iam_role]
     )
     region = ec2.regions[resource[:region]]
     subnet = region.subnets.with_tag('Name', resource[:subnet]).first
-    
+
     block_devices = array_from_puppet(resource['block_device_mappings']).each do |dev|
       # Fun fact: puppet doesn't have an int type
       if dev['ebs'] and dev['ebs']['volume_size']
@@ -60,7 +60,7 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       :key_name             => resource[:key_name],
       :associate_public_ip_address => resource[:associate_public_ip_address],
       :block_device_mappings => block_devices,
-      :security_groups => resource[:security_groups].map do |group_name| 
+      :security_groups => resource[:security_groups].map do |group_name|
         subnet.vpc.security_groups.with_tag('Name', group_name).first
       end,
     )
@@ -74,8 +74,8 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
     if resource[:elastic_ip]
       instance.associate_elastic_ip(elastic_ip)
     end
-    
-    
+
+
     instance.block_devices.each do |dev|
       if dev[:ebs] and dev[:ebs][:volume_id]
         name = dev[:device_name].sub(/^\/dev\//, '')
@@ -86,7 +86,7 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
     tag_with_name instance, resource[:name]
     tags = resource[:tags] || {}
     tags.each { |k,v| instance.add_tag(k, :value => v) }
-    
+
     instance
   end
   def destroy
