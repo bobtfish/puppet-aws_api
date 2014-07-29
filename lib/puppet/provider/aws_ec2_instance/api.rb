@@ -12,6 +12,8 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
   def self.new_from_aws(region_name, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
+    profile = find_instance_profile_by_id(item.iam_instance_profile_id)
+    subnet = ec2.regions[region_name].subnets[item.subnet_id]
     new(
       :aws_item         => item,
       :name             => name,
@@ -20,8 +22,8 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       :region           => region_name,
       :image_id         => item.image_id,
       :instance_type    => item.instance_type,
-      :iam_role         => item.iam_instance_profile_id,
-      :subnet           => item.subnet_id,
+      :iam_role         => profile[:instance_profile_name],
+      :subnet           => subnet.tags['Name'],
       :key_name         => item.key_pair.name,
       :tags             => tags,
       :elastic_ip       => !!item.elastic_ip

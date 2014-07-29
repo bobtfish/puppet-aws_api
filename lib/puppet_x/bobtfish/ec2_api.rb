@@ -152,6 +152,13 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     r53.hosted_zones.find{|zone| zone.name == name }
   end
 
+  def self.find_instance_profile_by_id(id)
+    # No there really isn't a direct ID lookup API call, go figure
+    iam.client.list_instance_profiles[:instance_profiles].find do |profile| 
+      profile[:instance_profile_id] == id
+    end
+  end
+
   def flush
   end
 
