@@ -18,19 +18,13 @@ Puppet::Type.type(:aws_hosted_zone).provide(:api, :parent => Puppet_X::Bobtfish:
 
   
   def create
-    zone = r53.create(resource[:name])
-    wait_until_ready(zone)
-    zone
+    unless resource[:name].end_with? '.'
+      raise "Hosted zone name must terminate with a dot - e.g. 'example.com.', not 'example.com' "
+    end
+    r53.hosted_zones.create(resource[:name])
   end
   def destroy
     @property_hash[:aws_item].delete
-  end
-
-  def wait_until_ready(zone)
-    until zone.change_info.status == 'PENDING'
-      puts "Zone status is: #{zone.change_info.status}"
-      sleep 1
-    end
   end
 
 end
