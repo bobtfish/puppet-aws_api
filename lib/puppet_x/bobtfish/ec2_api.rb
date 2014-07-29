@@ -81,6 +81,14 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     self.class.ec2()
   end
 
+  def self.r53
+    amazon_thing(AWS::Route53)
+  end
+
+  def r53
+    self.class.r53
+  end
+
   def self.regions
     @@regions ||= begin
       if HAVE_AWS_SDK
@@ -138,6 +146,10 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
         vpc_name == name
       end
     end
+  end
+
+  def self.find_hosted_zone_by_name(name)
+    r53.hosted_zones.find{|zone| zone.name == name }
   end
 
   def flush
