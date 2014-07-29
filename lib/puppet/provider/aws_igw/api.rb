@@ -16,7 +16,7 @@ Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :id               => item.id,
       :vpc              => vpc_name,
       :ensure           => :present,
-      :tags             => tags,
+      :tags             => tags
     )
   end
   def self.instances

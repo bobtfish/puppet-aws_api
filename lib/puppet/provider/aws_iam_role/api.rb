@@ -9,7 +9,7 @@ Puppet::Type.type(:aws_iam_role).provide(:api, :parent => Puppet_X::Bobtfish::Ec
       :id               => item[:id],
       :arn              => item[:arn],
       :assume_role_policy_document =>  JSON.parse(URI.decode(item[:assume_role_policy_document])),
-      :ensure           => :present,
+      :ensure           => :present
     )
   end
   def self.instances

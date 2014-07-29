@@ -24,7 +24,7 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       :subnet           => item.subnet_id,
       :key_name         => item.key_pair.name,
       :tags             => tags,
-      :elastic_ip       => !!item.elastic_ip,
+      :elastic_ip       => !!item.elastic_ip
     )
   end
   def self.instances

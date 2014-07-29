@@ -33,7 +33,7 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
       :vpc              => vpc.tags['Name'],
       :tags             => tags,
       :authorize_ingress => ingress,
-      :authorize_egress  => egress,
+      :authorize_egress  => egress
     )
   end
   def self.instances
