@@ -16,7 +16,7 @@ Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :id               => item.id,
       :vpc              => vpc_name,
       :ensure           => :present,
-      :tags             => tags
+      :tags             => tags,
     )
   end
   def self.instances
@@ -25,25 +25,26 @@ Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     end.flatten
   end
   def create
-    begin
-      if ! resource[:vpc]
-        fail "Must have a vpc to create an igw"
-      end
-      region_name = find_region_name_for_vpc_name resource[:vpc]
-      if !region_name
-        fail "Cannot find VPC named #{resource[:vpc]} for igw"
-      end
-      igw = ec2.regions[region_name].internet_gateways.create()
-      if resource[:vpc]
-        igw.attach(find_vpc_item_by_name(resource[:vpc]))
-      end
-      tag_with_name igw, resource[:name]
-      tags = resource[:tags] || {}
-      tags.each { |k,v| igw.add_tag(k, :value => v) }
-      igw
-    rescue Exception => e
-      fail e
+    if ! resource[:vpc]
+      fail "Must have a vpc to create an igw"
     end
+    region_name = find_region_name_for_vpc_name resource[:vpc]
+    if !region_name
+      fail "Cannot find VPC named #{resource[:vpc]} for igw"
+    end
+    igw = ec2.regions[region_name].internet_gateways.create()
+    vpc = find_vpc_item_by_name(resource[:vpc])
+    igw.attach(vpc)
+    if resource[:route_to_main]
+      vpc.route_tables.main_route_table.create_route( '0.0.0.0/0',
+        :internet_gateway => igw
+      )
+    end
+
+    tag_with_name igw, resource[:name]
+    tags = resource[:tags] || {}
+    tags.each { |k,v| igw.add_tag(k, :value => v) }
+    igw
   end
   def destroy
     @property_hash[:aws_item].detach(@property_hash[:aws_item].vpc) if @property_hash[:aws_item].vpc

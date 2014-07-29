@@ -42,17 +42,14 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
     fail "Set tags not implemented yet"
   end
   def create
-    begin
-      vpc = find_vpc_item_by_name(resource[:vpc])
-      subnet = vpc.subnets.create(resource[:cidr])
-      wait_until_state subnet, :available
-      tag_with_name subnet, resource[:name]
-      tags = resource[:tags] || {}
-      tags.each { |k,v| subnet.add_tag(k, :value => v) }
-      subnet
-    rescue Exception => e
-      fail e
-    end
+    vpc = find_vpc_item_by_name(resource[:vpc])
+    subnet = vpc.subnets.create(resource[:cidr])
+    wait_until_state subnet, :available
+    tag_with_name subnet, resource[:name]
+    tags = resource[:tags] || {}
+    tags.each { |k,v| subnet.add_tag(k, :value => v) }
+    subnet
+    
   end
   def destroy
     @property_hash[:aws_item].delete

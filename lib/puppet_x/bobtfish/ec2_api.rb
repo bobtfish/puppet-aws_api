@@ -19,7 +19,13 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def self.prefetch(resources)
-    instances.each do |provider|
+    all_instances = if method(:instances).arity > 0
+      # This is so hacky, I am so sorry
+      instances(resources)
+    else
+      instances
+    end
+    all_instances.each do |provider|
       if resource = resources[provider.name] then
         resource.provider = provider
       end
@@ -32,6 +38,10 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
   def name_or_id(item)
     self.class.name_or_id(item)
+  end
+
+  def wait_until_status(item, status)
+    sleep 1 until item.status == status
   end
 
   def wait_until_state(item, state)
@@ -145,5 +155,34 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     @property_hash[:aws_item].attach(vpc)
     @property_hash[:vpc] = vpc_name
   end
+
+  def self.array_to_puppet(arr)
+    if arr == nil
+      return nil
+    elsif arr.size == 1
+      arr[0]
+    else
+      arr
+    end
+  end
+
+  def self.array_from_puppet(arr)
+    if arr.is_a? Array
+      arr
+    elsif arr == nil
+      []
+    else
+      [arr]
+    end
+  end
+
+  def array_to_puppet(arr)
+    self.class.array_to_puppet(arr)
+  end
+
+  def array_from_puppet(arr)
+    self.class.array_from_puppet(arr)
+  end
+
 end
 

@@ -8,5 +8,6 @@ Puppet::Type.newtype(:aws_igw) do
     self[:vpc]
   end
   newproperty(:tags)
+  newparam(:route_to_main)
 end
 
