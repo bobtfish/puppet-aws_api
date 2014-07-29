@@ -49,7 +49,7 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
     tags = resource[:tags] || {}
     tags.each { |k,v| subnet.add_tag(k, :value => v) }
     subnet
-    
+
   end
   def destroy
     @property_hash[:aws_item].delete

@@ -23,7 +23,7 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
     end
     ingress = array_to_puppet(item.ingress_ip_permissions.map(&get_perms))
     egress = array_to_puppet(item.egress_ip_permissions.map(&get_perms))
-    
+
     new(
       :aws_item         => item,
       :name             => name,
@@ -54,7 +54,7 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
   def authorize_egress=(rules)
     set_rules(@property_hash[:aws_item], :authorize_egress, rules)
   end
-  
+
   def create
     vpc = find_vpc_item_by_name(resource[:vpc])
     sg = vpc.security_groups.create(
@@ -62,14 +62,14 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
       :description => resource[:description],
       :vpc => vpc
     )
-    
+
     tag_with_name sg, resource[:name]
     tags = resource[:tags] || {}
     tags.each { |k,v| sg.add_tag(k, :value => v) }
 
     set_rules(sg, :authorize_ingress, resrource[:authorize_ingress])
     set_rules(sg, :authorize_egress, resrource[:authorize_egress])
-    
+
     sg
   end
   def destroy
@@ -94,7 +94,7 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
         protocol = if perm['protocol'] == 'any'
           -1 # obviously...
         else
-          perm['protocol'] 
+          perm['protocol']
         end
         sg.send method, protocol, perm['ports'], *perm['sources'].map do |source|
           if source =~ /^\d+\.\d+\.\d+\.\d+\/\d+$/
@@ -105,7 +105,7 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
             sg.vpc.security_groups.with_tag('Name', source).first
           end
         end
-        
+
       end
     end
   end
