@@ -23,6 +23,7 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :scheme           => item.scheme,
       :health_check     => health_check,
       :target           => target,
+      :instances        => item.instances.map {|i| s.tags['Name']}
     )
   end
   def self.instances
@@ -39,8 +40,9 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :scheme => resource[:scheme],
     )
     lb.configure_health_check(resource[:health_check].merge(:target => resource[:target]))
+    lb.instances.register( resource[:instances].map{|i| lookup(:aws_ec2_instance, i)} )
   end
-  
+
   def destroy
     @property_hash[:aws_item].delete
     @property_hash[:ensure] = :absent

@@ -39,5 +39,11 @@ Puppet::Type.newtype(:aws_elb) do
   newproperty(:target) do
     defaultto "HTTP:80/"
   end
+  newproperty(:instances, :array_matching => :all) do
+    defaultto []
+  end
+  autorequire(:aws_ec2_instance) do
+    self[:instances]
+  end
 end
 
