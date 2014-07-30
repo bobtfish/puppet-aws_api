@@ -38,7 +38,7 @@ Puppet::Type.type(:aws_rrset).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_a
       if value.any?
         raise "ec2_instance option can't be used at the same time as value"
       end
-      instance = resource.catalog.resource("Aws_ec2_instance[#{resource[:ec2_instance]}]").provider.aws_item
+      instance = lookup(:aws_ec2_instance, resource[:ec2_instance])
       unless instance.elastic_ip and instance.elastic_ip.public_ip
         raise "ec2_instance reference must have a public Elastic IP"
       end

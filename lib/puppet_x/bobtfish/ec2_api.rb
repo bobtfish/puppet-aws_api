@@ -32,6 +32,12 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     end
   end
 
+  def lookup(type, name)
+    # Lookup aws objects from prefetched catalog
+    # TODO: we can probably replace most find by name lookups with this?
+    resource.catalog.resource("#{type.capitalize}[#{name}]").provider.aws_item
+  end
+
   def self.name_or_id(item)
     return unless item
     item.tags.to_h['Name'] || item.id
