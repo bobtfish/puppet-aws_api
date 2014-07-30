@@ -95,12 +95,12 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     self.class.r53
   end
 
-  def self.elb
-    amazon_thing(AWS::ELB)
+  def self.elb(region = None)
+    AWS::ELB.new(:region => region)
   end
 
-  def elb
-    self.class.elb
+  def elb(region=None)
+    self.class.elb(region)
   end
 
   def self.regions

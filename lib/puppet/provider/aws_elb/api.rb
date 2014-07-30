@@ -12,7 +12,7 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     new(
       :aws_item         => item,
       :name             => item.name,
-      :listners         => item.listeners.map { |l| {
+      :listeners         => item.listeners.map { |l| {
         :port => l.port,
         :protocol => l.protocol,
         :instance_port => l.instance_port,
@@ -27,19 +27,38 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     )
   end
   def self.instances
-    elb.load_balancers.collect { |item| new_from_aws(item) }
+    regions.collect{ |region| 
+      elb(region).load_balancers.collect { |item| new_from_aws(item) }}.flatten
   end
   
 
   def create
-    lb = elb.load_balancers.create(
+    listeners = resource[:listeners].map do |l|
+      {
+        :load_balancer_port => l['port'].to_i,
+        :protocol => l['protocol'],
+        :instance_port => l['instance_port'].to_i,
+        :instance_protocol => l['instance_protocol']
+      }
+    end
+
+    subnets = resource[:subnets].map{|s| lookup(:aws_subnet, s) }
+    region = subnets.first.availability_zone.region_name
+    lb = elb(region).load_balancers.create(
       resource[:name],
-      :listners => resource[:listners],
-      :subnets => resource[:subnets].map{|s| lookup(:aws_subnet, s)},
+      :listeners => listeners,
+      :subnets => subnets,
       :security_groups => resource[:security_groups].map{|s| lookup(:aws_security_group, s)},
-      :scheme => resource[:scheme],
+      :scheme => resource[:scheme].to_s
     )
-    lb.configure_health_check(resource[:health_check].merge(:target => resource[:target]))
+    
+    lb.configure_health_check(
+        :healthy_threshold => resource['health_check']['healthy_threshold'].to_i,
+        :unhealthy_threshold => resource['health_check']['unhealthy_threshold'].to_i,
+        :interval => resource['health_check']['interval'].to_i,
+        :timeout => resource['health_check']['timeout'].to_i,
+        :target => resource['target']
+      )
     lb.instances.register( resource[:instances].map{|i| lookup(:aws_ec2_instance, i)} )
   end
 

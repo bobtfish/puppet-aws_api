@@ -69,8 +69,8 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
     tags = resource[:tags] || {}
     tags.each { |k,v| sg.add_tag(k, :value => v) }
 
-    set_rules(sg, :authorize_ingress, resrource[:authorize_ingress])
-    set_rules(sg, :authorize_egress, resrource[:authorize_egress])
+    set_rules(sg, :authorize_ingress, resource[:authorize_ingress])
+    set_rules(sg, :authorize_egress, resource[:authorize_egress])
 
     sg
   end
