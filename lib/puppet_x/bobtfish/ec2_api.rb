@@ -95,6 +95,14 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     self.class.r53
   end
 
+  def self.elb
+    amazon_thing(AWS::ELB)
+  end
+
+  def elb
+    self.class.elb
+  end
+
   def self.regions
     @@regions ||= begin
       if HAVE_AWS_SDK
