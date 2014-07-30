@@ -76,7 +76,6 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
   end
   def destroy
     @property_hash[:aws_item].delete
-    wait_until_status @property_hash[:aws_item], :terminated
     @property_hash[:ensure] = :absent
   end
 
@@ -92,10 +91,9 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
       rule.revoke
     end
     if rules
-      puts "The rules: #{rules.inspect}"
       rules.each do |perm|
         protocol = if perm['protocol'] == 'any'
-          -1 # obviously...
+          -1 # obviously...?
         else
           perm['protocol']
         end

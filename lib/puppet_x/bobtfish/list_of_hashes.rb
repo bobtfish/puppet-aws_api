@@ -1,4 +1,9 @@
 require 'pp'
+require 'puppet'
+module Puppet_X
+  module Bobtfish
+  end
+end
 # A custon property type for arrays of hashes with order-independent compare.
 class Puppet_X::Bobtfish::ListOfHashesProperty < Puppet::Property
 	def should_to_s(newvalue)
