@@ -39,9 +39,11 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       :tags             => tags,
       :elastic_ip       => !!item.elastic_ip,
       :block_device_mappings => block_devices,
-      :security_groups => item.security_groups.collect(&:name)
+      :security_groups  => item.security_groups.collect(&:name),
+      :public_ip_address=> item.public_ip_address
     )
   end
+  
   def self.instances
     regions.collect do |region_name|
       instances_for_region(region_name).collect { |item| new_from_aws(region_name, item) }

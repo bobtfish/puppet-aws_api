@@ -1,4 +1,5 @@
 require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'puppet_x', 'bobtfish', 'list_of_hashes.rb'))
+require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'puppet_x', 'bobtfish', 'read_only_prop.rb'))
 Puppet::Type.newtype(:aws_ec2_instance) do
   @doc = "Manage AWS EC2 instances"
   newparam(:name)
@@ -25,6 +26,10 @@ Puppet::Type.newtype(:aws_ec2_instance) do
   end
   autorequire(:aws_security_group) do
     self[:security_groups]
+  end
+
+  newproperty(:public_ip_address, :parent => Puppet_X::Bobtfish::ReadOnlyProperty) do
+    desc "Read-only: public ip of machine"
   end
 end
 
