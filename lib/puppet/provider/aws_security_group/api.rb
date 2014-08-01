@@ -13,10 +13,14 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
   def self.new_from_aws(region_name, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
-    vpc = ec2.regions[region_name].vpcs[item.vpc_id]
+    if item.vpc_id
+      vpc = ec2.regions[region_name].vpcs[item.vpc_id].tags['Name']
+    else
+      vpc = nil
+    end
     get_perms = Proc.new do |perm|
-      ports = perm.port_range.to_a.map(&:to_s)
-      ports = ports[0] if ports.size == 1
+      ports = [perm.port_range.first, perm.port_range.last].map(&:to_s)
+      ports = ports[0] if ports[0] == ports[1]
       {
         'protocol' => perm.protocol.to_s,
         'ports' => ports,
@@ -32,7 +36,7 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
       :id               => item.id,
       :ensure           => :present,
       :description      => item.description,
-      :vpc              => vpc.tags['Name'],
+      :vpc              => vpc,
       :tags             => tags,
       :authorize_ingress => ingress,
       :authorize_egress  => egress
