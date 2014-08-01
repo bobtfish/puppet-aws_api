@@ -33,9 +33,18 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def lookup(type, name)
+    if not name or name =~ /^\s+$/
+      raise "Can't lookup #{type} with blank lookup-name"
+    end
     # Lookup aws objects from prefetched catalog
     # TODO: we can probably replace most find by name lookups with this?
-    resource.catalog.resource("#{type.capitalize}[#{name}]").provider.aws_item
+    found = resource.catalog.resource("#{type.capitalize}[#{name}]")
+    if found
+      return found.provider.aws_item
+    else
+      raise "Lookup failed: #{type.capitalize}[#{name}] not found"
+    end
+  end
   end
 
   def self.name_or_id(item)

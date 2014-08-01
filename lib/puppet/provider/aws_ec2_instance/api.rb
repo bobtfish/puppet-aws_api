@@ -12,8 +12,25 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
   def self.new_from_aws(region_name, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
-    profile = find_instance_profile_by_id(item.iam_instance_profile_id)
-    subnet = ec2.regions[region_name].subnets[item.subnet_id]
+    
+    if item.iam_instance_profile_id
+      profile = find_instance_profile_by_id(item.iam_instance_profile_id)[:instance_profile_name]
+    else
+      profile = nil
+    end
+
+    
+    if item.subnet
+      subnet = item.subnet.tags['Name']
+    else 
+      subnet = nil
+    end
+    
+    if item.key_pair
+      key_pair = item.key_pair.name
+    else
+      key_pair = nil
+    end
 
     block_devices = item.block_device_mappings.to_h.map do |mount, dev|
       {
@@ -33,9 +50,9 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       :region           => region_name,
       :image_id         => item.image_id,
       :instance_type    => item.instance_type,
-      :iam_role         => profile[:instance_profile_name],
-      :subnet           => subnet.tags['Name'],
-      :key_name         => item.key_pair.name,
+      :iam_role         => profile,
+      :subnet           => subnet,
+      :key_name         => key_pair,
       :tags             => tags,
       :elastic_ip       => !!item.elastic_ip,
       :block_device_mappings => block_devices,
@@ -46,7 +63,15 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
   
   def self.instances
     regions.collect do |region_name|
-      instances_for_region(region_name).collect { |item| new_from_aws(region_name, item) }
+      # Swapping out the default region like seems to be necessary (sometimes - it's not
+      # very deterministic), the subnet lookup can get confused otherwise.
+      prev_region_conf = AWS.config.region
+      AWS.config(:region => region_name)
+      results = instances_for_region(region_name).find_all(&:exists?).collect { |item|
+        new_from_aws(region_name, item)
+      }
+      AWS.config(:region => prev_region_conf)
+      results
     end.flatten
   end
   [:region].each do |ro_method|
@@ -82,8 +107,13 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       :block_device_mappings => block_devices,
       :security_groups => resource[:security_groups].map do |group_name|
         subnet.vpc.security_groups.with_tag('Name', group_name).first
-      end,
+      end
     )
+    # Tag name immediately so we don't just keep building instances if this fails    
+    tag_with_name instance, resource[:name]
+    tags = resource[:tags] || {}
+    tags.each { |k,v| instance.add_tag(k, :value => v) }
+    
     if resource[:elastic_ip]
       elastic_ip = region.elastic_ips.create(
         :vpc => true,
@@ -102,10 +132,6 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
         region.volumes[dev[:ebs][:volume_id]].add_tag('Name', :value => "#{resource[:name]}-#{name}")
       end
     end
-
-    tag_with_name instance, resource[:name]
-    tags = resource[:tags] || {}
-    tags.each { |k,v| instance.add_tag(k, :value => v) }
 
     instance
   end
