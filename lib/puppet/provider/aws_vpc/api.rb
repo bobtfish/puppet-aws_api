@@ -136,6 +136,11 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       igw.delete
     end
 
+    # Just give everything a little bit of time to settle so we don't get depdendency
+    # violations - experience has shown this to be simpler and more reliable than
+    # explicit checks.
+    sleep 2 
+
     # Subnets
     subnets.each do |sn|
       debug "Disposing of subnet: #{sn.tags['Name']}"
