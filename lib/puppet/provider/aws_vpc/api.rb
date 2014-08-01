@@ -71,5 +71,85 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     @property_hash[:aws_item].delete
     @property_hash[:ensure] = :absent
   end
+  def purge
+    vpc = @property_hash[:aws_item]
+    subnets = vpc.subnets
+
+    # First, any load balancers:
+    regions = subnets.collect do |sn|
+      sn.availability_zone.region_name
+    end
+    regions.each do |region|
+      elb(region).load_balancers.each do |lb|
+        if lb.subnets.all?{|sn| subnets.include?(sn)}
+          debug "Disposing of Elastic Load Balancer #{lb.name}"
+          lb.delete
+          sleep 1 until not lb.exists?
+        end
+      end
+    end
+    # Freeze the current set
+    instances = vpc.instances.to_a
+    
+    # Stop everything:
+    instances.each do |node|
+      debug "Stopping instance #{node.tags['Name']}"
+      node.stop
+    end
+    instances.each do |node|
+      wait_until_status(node, :stopped)
+      # Dispose of EIPs
+      eip = node.elastic_ip
+      if eip
+        debug "Releasing #{eip}"
+        eip.disassociate
+        eip.release
+      end
+      # Force-release volumes, and destroy them
+      node.attachments.to_a.each do |mnt, dev|
+        debug "Detatching #{mnt}"
+        volume = dev.volume
+        dev.delete(:force => true)
+        wait_until_status(volume, :available)
+        debug "Disposing of #{dev.volume.tags['Name']}"
+        volume.delete
+      end
+      debug "Terminating #{node.tags['Name']}"
+      node.terminate
+      node.tags['Name'] = "#{node.tags['Name']}-terminated"
+    end
+
+    instances.each do |node|
+      # Ensure everyone is terminated or else clearing SGs will fail
+      wait_until_status(node, :terminated)
+    end
+
+    # Security groups
+    vpc.security_groups.each do |sg|
+      next if sg.name == 'default'
+      debug "Disposing of Security Group: #{sg.name}"
+      sg.delete
+    end
+
+    # Gateways
+    igw = vpc.internet_gateway
+    if igw
+      debug "Detach Internet Gateway: #{igw.tags['Name']}"
+      igw.detach(vpc)
+      debug "Disposing of #{igw.tags['Name']}"
+      igw.delete
+    end
+
+    # Subnets
+    subnets.each do |sn|
+      debug "Disposing of subnet: #{sn.tags['Name']}"
+      sn.delete
+    end
+
+    # Finally, the VPC itself
+    debug "Purging VPC #{vpc.tags['Name']}"
+    vpc.delete
+    @property_hash[:ensure] = :purged
+  end
 end
 

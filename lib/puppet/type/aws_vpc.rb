@@ -1,7 +1,13 @@
 Puppet::Type.newtype(:aws_vpc) do
   @doc = "Manage AWS vpcs"
   newparam(:name)
-  ensurable
+  ensurable do
+    self.defaultvalues
+    newvalue(:purged) do
+      # Recursively purge
+      @resource.provider.purge 
+    end
+  end
   newproperty(:id)
   newproperty(:region)
   newproperty(:cidr)
