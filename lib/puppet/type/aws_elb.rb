@@ -1,9 +1,9 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'puppet_x', 'bobtfish', 'list_of_hashes.rb'))
+require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'puppet_x', 'bobtfish', 'unordered_list_prop.rb'))
 
 Puppet::Type.newtype(:aws_elb) do
   @doc = "Manage AWS Elastic Load Balancers"
   newparam(:name)
-  newproperty(:listeners, :parent => Puppet_X::Bobtfish::ListOfHashesProperty) do
+  newproperty(:listeners, :parent => Puppet_X::Bobtfish::UnorderedValueListProperty) do
     defaultto [{
       :port => 80,
       :protocol => 'http',
@@ -12,13 +12,13 @@ Puppet::Type.newtype(:aws_elb) do
     }]
   end
   ensurable
-  newproperty(:subnets, :array_matching => :all) do
+  newproperty(:subnets, :parent => Puppet_X::Bobtfish::UnorderedValueListProperty) do
     defaultto []
   end
   autorequire(:aws_subnet) do
     self[:subnets]
   end
-  newproperty(:security_groups, :array_matching => :all) do
+  newproperty(:security_groups, :parent => Puppet_X::Bobtfish::UnorderedValueListProperty) do
     defaultto []
   end
   autorequire(:aws_security_group) do
@@ -39,7 +39,7 @@ Puppet::Type.newtype(:aws_elb) do
   newproperty(:target) do
     defaultto "HTTP:80/"
   end
-  newproperty(:instances, :array_matching => :all) do
+  newproperty(:instances, :parent => Puppet_X::Bobtfish::UnorderedValueListProperty) do
     defaultto []
   end
   autorequire(:aws_ec2_instance) do

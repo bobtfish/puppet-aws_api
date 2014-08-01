@@ -5,7 +5,7 @@ module Puppet_X
   end
 end
 # A custon property type for arrays of hashes with order-independent compare.
-class Puppet_X::Bobtfish::ListOfHashesProperty < Puppet::Property
+class Puppet_X::Bobtfish::UnorderedValueListProperty < Puppet::Property
 	def should_to_s(newvalue)
 		PP.pp(newvalue.sort_by(&:to_a), "\n")
     end
@@ -19,6 +19,15 @@ class Puppet_X::Bobtfish::ListOfHashesProperty < Puppet::Property
     end
 
     def insync?(is)
-    	@should.sort_by(&:to_a) == is.sort_by(&:to_a)
+    	@should.sort_by(&method(:sort_key)) == is.sort_by(&method(:sort_key))
+    end
+    private
+    def sort_key(value)
+        case value
+        when Hash
+            value.to_a
+        else
+            value
+        end
     end
 end

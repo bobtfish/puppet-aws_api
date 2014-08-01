@@ -1,4 +1,4 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'puppet_x', 'bobtfish', 'list_of_hashes.rb'))
+require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'puppet_x', 'bobtfish', 'unordered_list_prop.rb'))
 require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'puppet_x', 'bobtfish', 'read_only_prop.rb'))
 Puppet::Type.newtype(:aws_ec2_instance) do
   @doc = "Manage AWS EC2 instances"
@@ -13,8 +13,8 @@ Puppet::Type.newtype(:aws_ec2_instance) do
   newproperty(:tags)
   newparam(:associate_public_ip_address)
   newproperty(:elastic_ip)
-  newproperty(:block_device_mappings, :parent => Puppet_X::Bobtfish::ListOfHashesProperty)
-  newproperty(:security_groups, :array_matching => :all) do
+  newproperty(:block_device_mappings, :parent => Puppet_X::Bobtfish::UnorderedValueListProperty)
+  newproperty(:security_groups, :parent => Puppet_X::Bobtfish::UnorderedValueListProperty) do
     defaultto []
   end
 
