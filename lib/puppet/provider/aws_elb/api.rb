@@ -35,7 +35,20 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       elb(region).load_balancers.collect { |item| new_from_aws(item) }}.flatten
   end
 
-  read_only(:listeners, :subnets, :security_groups, :scheme, :health_check, :target, :instances)
+  read_only(:listeners, :subnets, :security_groups, :scheme, :health_check, :target)
+
+  def instances=(value)
+    wanted = value.map{|name| lookup(:aws_ec2_instance, name)}
+    current = aws_item.instances.to_a
+    unwanted = current - wanted 
+    needed = wanted - current
+    if unwanted.any?
+      aws_item.instances.deregister(*unwanted)
+    end
+    if needed.any?
+      aws_item.instances.register(*needed)
+    end
+  end
   
 
   def create
