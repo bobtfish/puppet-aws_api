@@ -19,8 +19,12 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
       vpc = nil
     end
     get_perms = Proc.new do |perm|
-      ports = [perm.port_range.first, perm.port_range.last].map(&:to_s)
-      ports = ports[0] if ports[0] == ports[1]
+      if perm.port_range
+        ports = [perm.port_range.first, perm.port_range.last].map(&:to_s)
+        ports = ports[0] if ports[0] == ports[1]
+      else
+        ports = []
+      end
       {
         'protocol' => perm.protocol.to_s,
         'ports' => ports,
