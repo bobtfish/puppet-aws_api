@@ -81,6 +81,22 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
   end
 
   def create
+    if aws_item
+      case aws_item.status
+      when :pending, :running
+        # just wait
+        wait_until_status(aws_item, :running)
+        return 
+      when :shutting_down, :stopped, :stopping
+        # Finish what you were doing
+        aws_item.stop
+        wait_until_status(aws_item, :stopped)
+        # Now start
+        aws_item.start
+        wait_until_status(aws_item, :running)
+        return
+      end
+    end
     profile = iam.client.get_instance_profile(
       :instance_profile_name => resource[:iam_role]
     )
