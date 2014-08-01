@@ -121,7 +121,9 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
 
   def self.regions
     @@regions ||= begin
-      if HAVE_AWS_SDK
+      if ENV['AWS_REGION'] and not ENV['AWS_REGION'].empty?
+        [ENV['AWS_REGION']]
+      elsif HAVE_AWS_SDK
         ec2.regions.collect { |r| r.name }
       else
         []
