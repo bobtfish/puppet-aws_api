@@ -5,25 +5,29 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   mk_resource_methods
 
 
-  def self.new_from_aws(region_name, item)
-    health_check = item.health_check
-    target = health_check.delete(:target)
+  def self.new_from_aws(item)
 
     new(
       :aws_item         => item,
+      :ensure           => :present,
       :name             => item.name,
       :listeners         => item.listeners.map { |l| {
-        :port => l.port,
-        :protocol => l.protocol,
-        :instance_port => l.instance_port,
-        :instance_protocol => l.instance_protocol
+        'port' => l.port.to_s,
+        'protocol' => l.protocol.to_s,
+        'instance_port' => l.instance_port.to_s,
+        'instance_protocol' => l.instance_protocol.to_s
       }},
       :subnets          => item.subnets.map {|s| s.tags['Name']},
       :security_groups  => item.security_groups.collect(&:name),
       :scheme           => item.scheme,
-      :health_check     => health_check,
-      :target           => target,
-      :instances        => item.instances.map {|i| s.tags['Name']}
+      :health_check     => {
+        'healthy_threshold' => item.health_check[:healthy_threshold].to_s,
+        'unhealthy_threshold' => item.health_check[:unhealthy_threshold].to_s,
+        'interval' => item.health_check[:interval].to_s,
+        'timeout' => item.health_check[:timeout].to_s,
+      },
+      :target           => item.health_check[:target],
+      :instances        => item.instances.map {|i| i.tags['Name']}
     )
   end
   def self.instances
@@ -59,7 +63,7 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
         :timeout => resource['health_check']['timeout'].to_i,
         :target => resource['target']
       )
-    lb.instances.register( resource[:instances].map{|i| lookup(:aws_ec2_instance, i)} )
+    lb.instances.register( resource[:instances].map{|name| lookup(:aws_ec2_instance, name)} )
   end
 
   def destroy
