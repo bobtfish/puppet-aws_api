@@ -43,11 +43,8 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
       instances_for_region(region_name).collect { |item| new_from_aws(region_name, item) }
     end.flatten
   end
-  [:region].each do |ro_method|
-    define_method("#{ro_method}=") do |v|
-      fail "Cannot manage #{ro_method} is read-only once an instance is created"
-    end
-  end
+  
+  read_only(:description, :vpc, :authorize_ingress, :authorize_egress)
 
   def authorize_ingress=(rules)
     set_rules(@property_hash[:aws_item], :authorize_ingress, rules)

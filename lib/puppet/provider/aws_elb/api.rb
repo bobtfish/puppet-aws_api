@@ -34,6 +34,8 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     regions.collect{ |region| 
       elb(region).load_balancers.collect { |item| new_from_aws(item) }}.flatten
   end
+
+  read_only(:listeners, :subnets, :security_groups, :scheme, :health_check, :target, :instances)
   
 
   def create

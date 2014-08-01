@@ -74,11 +74,9 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       results
     end.flatten
   end
-  [:region].each do |ro_method|
-    define_method("#{ro_method}=") do |v|
-      fail "Cannot manage #{ro_method} is read-only once an instance is created"
-    end
-  end
+
+  read_only(:image_id, :instance_type, :iam_role, :region, :subnet, :subnet, :key_name,
+    :elastic_ip, :block_device_mappings, :security_groups)
 
   def create
     if aws_item

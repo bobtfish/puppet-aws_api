@@ -33,11 +33,7 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
       end.flatten
     end.flatten
   end
-  [:vpc, :cidr].each do |ro_method|
-    define_method("#{ro_method}=") do |v|
-      fail "Cannot manage #{ro_method} is read-only once a subnet is created"
-    end
-  end
+  read_only(:vpc, :cidr, :az, :route_table)
   def tags=(value)
     fail "Set tags not implemented yet"
   end

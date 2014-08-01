@@ -34,11 +34,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       vpcs_for_region(region_name).collect { |item| new_from_aws(region_name, item) }
     end.flatten
   end
-  [:cidr, :region, :instance_tenancy].each do |ro_method|
-    define_method("#{ro_method}=") do |v|
-      fail "Cannot manage #{ro_method} is read-only once a vpc is created"
-    end
-  end
+  read_only(:cidr, id: :region, :aws_dops, :instance_tenancy) # can't set ID can we?
   def dhcp_options=(value)
     dopts = find_dhopts_item_by_name(value)
     fail("Could not find dhcp options named '#{value}'") unless dopts

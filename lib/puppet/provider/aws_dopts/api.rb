@@ -26,11 +26,9 @@ Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_a
       ec2.regions[region_name].dhcp_options.collect { |item| new_from_aws(region_name,item) }
     end.flatten
   end
-  [:domain_name, :ntp_servers, :netbios_name_servers, :netbios_node_type].each do |ro_method|
-    define_method("#{ro_method}=") do |v|
-      fail "Cannot manage #{ro_method} is read-only once a dopts set is created."
-    end
-  end
+  
+  read_only(:domain_name, :ntp_servers, :netbios_name_servers, :netbios_node_type)
+
   def create
     begin
       dopts = ec2.regions[resource[:region]].dhcp_options.create({

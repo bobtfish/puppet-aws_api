@@ -17,11 +17,8 @@ Puppet::Type.type(:aws_iam_group).provide(:api, :parent => Puppet_X::Bobtfish::E
   def self.instances
     iam.groups.collect { |item| new_from_aws(item) }
   end
-  [:arn, :name].each do |ro_method|
-    define_method("#{ro_method}=") do |v|
-      fail "Cannot manage #{ro_method} is read-only once a user is created"
-    end
-  end
+  read_only(:arn, :name, :policies) # can name even change?, can arn actually be set?
+
   def policies=(newpolicies)
     @property_hash[:aws_item].policies.clear
     newpolicies.each do |name,val|

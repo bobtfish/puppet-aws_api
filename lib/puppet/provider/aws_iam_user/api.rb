@@ -18,11 +18,7 @@ Puppet::Type.type(:aws_iam_user).provide(:api, :parent => Puppet_X::Bobtfish::Ec
   def self.instances
     iam.users.collect { |item| new_from_aws(item) }
   end
-  [:arn, :path, :name].each do |ro_method|
-    define_method("#{ro_method}=") do |v|
-      fail "Cannot manage #{ro_method} is read-only once a user is created"
-    end
-  end
+  read_only(:arn, :path, :name) # can name even change?, can arn actually be set?
   def groups=(newgroups)
     groups_to_add = Set.new(newgroups).subtract(@property_hash[:groups]).to_a.map { |name| iam.groups[name] }
     groups_to_remove = Set.new(@property_hash[:groups]).subtract(newgroups).to_a.map { |name| iam.groups[name] }

@@ -24,6 +24,9 @@ Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       ec2.regions[region_name].internet_gateways.collect { |item| new_from_aws(item) }
     end.flatten
   end
+
+  read_only(:vpc)
+
   def create
     if ! resource[:vpc]
       fail "Must have a vpc to create an igw"

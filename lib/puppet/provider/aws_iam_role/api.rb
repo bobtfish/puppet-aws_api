@@ -15,11 +15,8 @@ Puppet::Type.type(:aws_iam_role).provide(:api, :parent => Puppet_X::Bobtfish::Ec
   def self.instances
     iam.client.list_roles.roles.collect { |item| new_from_aws(item) }
   end
-  [:arn, :name, :assume_role_policy_document].each do |ro_method|
-    define_method("#{ro_method}=") do |v|
-      fail "Cannot manage #{ro_method} is read-only once an IAM role is created"
-    end
-  end
+  
+  read_only(:arn, :service_principal, :assume_role_policy_document)
 
   def service_principal
     assume_role_policy_document['Statement'][0]['Principal']['Service'] rescue nil

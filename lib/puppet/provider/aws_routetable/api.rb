@@ -26,11 +26,7 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
         }.reject { |k, v| v.nil? } }
     )
   end
-  [:vpc, :subnets, :routes].each do |ro_method|
-    define_method("#{ro_method}=") do |v|
-      fail "Cannot manage #{ro_method} is read-only in this version of the module.."
-    end
-  end
+  read_only(:vpc, :subnets, :routes, :main)
   def self.instances
     regions.collect do |region_name|
       ec2.regions[region_name].route_tables.collect { |item| new_from_aws(region_name,item) }

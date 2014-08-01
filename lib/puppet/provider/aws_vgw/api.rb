@@ -25,11 +25,9 @@ Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       ec2.regions[region_name].vpn_gateways.reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(item, region_name) }
     end.flatten
   end
-  [:region].each do |ro_method|
-    define_method("#{ro_method}=") do |v|
-      fail "Cannot manage #{ro_method} is read-only once an vgw is created"
-    end
-  end
+  
+  read_only(:region, :vpn_type, :region_name, :availability_zone)
+
   def vpc=(name)
     @property_hash[:aws_item].attach(find_vpc_item_by_name(name))
   end

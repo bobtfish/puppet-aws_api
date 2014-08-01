@@ -23,11 +23,9 @@ Puppet::Type.type(:aws_cgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       ec2.regions[region_name].customer_gateways.reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(region_name,item) }
     end.flatten
   end
-  [:ip_address, :bgp_asn, :region, :type].each do |ro_method|
-    define_method("#{ro_method}=") do |v|
-      fail "Cannot manage #{ro_method} is read-only once an cgw is created"
-    end
-  end
+
+  read_only(:ip_address, :bgp_asn, :region, :type)
+  
   def create
     begin
       fail "Cannot create aws_cgw #{resource[:title]} without a region" unless resource[:region]
