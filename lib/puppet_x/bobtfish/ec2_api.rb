@@ -45,6 +45,13 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
       raise "Lookup failed: #{type.capitalize}[#{name}] not found"
     end
   end
+
+  def self.read_only(*methods)
+    methods.each do |ro_method|
+      define_method("#{ro_method}=") do |v|
+        fail "Can't change '#{ro_method}' for '#{name}' - property is read-only once #{resource.type} resource is created."
+      end
+    end
   end
 
   def self.name_or_id(item)
