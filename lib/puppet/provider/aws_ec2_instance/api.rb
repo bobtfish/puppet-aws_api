@@ -13,23 +13,19 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
 
+    profile = nil
     if item.iam_instance_profile_id
       profile = find_instance_profile_by_id(item.iam_instance_profile_id)[:instance_profile_name]
-    else
-      profile = nil
     end
 
-
+    subnet = nil
     if item.subnet
       subnet = item.subnet.tags['Name']
-    else
-      subnet = nil
     end
 
+    key_pair = nil
     if item.key_pair
       key_pair = item.key_pair.name
-    else
-      key_pair = nil
     end
 
     block_devices = item.block_device_mappings.to_h.map do |mount, dev|
