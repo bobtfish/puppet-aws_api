@@ -11,6 +11,6 @@ class Puppet_X::Bobtfish::ReadOnlyProperty < Puppet::Property
         raise ReadOnlyPropertyError.new("Can't set read-only property #{name}")
     end
     def insync?(is)
-    	true
+        true
     end
 end
