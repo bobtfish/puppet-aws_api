@@ -25,7 +25,7 @@ Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       ec2.regions[region_name].vpn_gateways.reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(item, region_name) }
     end.flatten
   end
-  
+
   read_only(:region, :vpn_type, :region_name, :availability_zone)
 
   def vpc=(name)

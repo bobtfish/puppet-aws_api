@@ -12,20 +12,20 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
   def self.new_from_aws(region_name, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
-    
+
     if item.iam_instance_profile_id
       profile = find_instance_profile_by_id(item.iam_instance_profile_id)[:instance_profile_name]
     else
       profile = nil
     end
 
-    
+
     if item.subnet
       subnet = item.subnet.tags['Name']
-    else 
+    else
       subnet = nil
     end
-    
+
     if item.key_pair
       key_pair = item.key_pair.name
     else
@@ -60,7 +60,7 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       :public_ip_address=> item.public_ip_address
     )
   end
-  
+
   def self.instances
     regions.collect do |region_name|
       # Swapping out the default region like seems to be necessary (sometimes - it's not
@@ -84,7 +84,7 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       when :pending, :running
         # just wait
         wait_until_status(aws_item, :running)
-        return 
+        return
       when :shutting_down, :stopped, :stopping
         # Finish what you were doing
         aws_item.stop
@@ -123,11 +123,11 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
         subnet.vpc.security_groups.with_tag('Name', group_name).first
       end
     )
-    # Tag name immediately so we don't just keep building instances if this fails    
+    # Tag name immediately so we don't just keep building instances if this fails
     tag_with_name instance, resource[:name]
     tags = resource[:tags] || {}
     tags.each { |k,v| instance.add_tag(k, :value => v) }
-    
+
     if resource[:elastic_ip]
       elastic_ip = region.elastic_ips.create(
         :vpc => true,

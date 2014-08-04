@@ -51,7 +51,7 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
       instances_for_region(region_name).collect { |item| new_from_aws(region_name, item) }
     end.flatten
   end
-  
+
   read_only(:description, :vpc, :authorize_ingress, :authorize_egress)
 
   def authorize_ingress=(rules)

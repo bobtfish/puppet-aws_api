@@ -5,7 +5,7 @@ Puppet::Type.newtype(:aws_vpc) do
     self.defaultvalues
     newvalue(:purged) do
       # Recursively purge
-      @resource.provider.purge 
+      @resource.provider.purge
     end
   end
   newproperty(:id)

@@ -10,7 +10,7 @@ Puppet::Type.newtype(:aws_rrset) do
   autorequire(:aws_hosted_zone) do
     self[:zone]
   end
-  
+
   newproperty(:value, :array_matching => :all) do
     defaultto []
     desc "The record value string (array of strings for multiple lines)"
@@ -64,6 +64,6 @@ Puppet::Type.newtype(:aws_rrset) do
   newproperty(:ttl) do
   	desc "TTL in seconds"
   end
-  
+
 end
 
