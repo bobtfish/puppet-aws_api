@@ -24,7 +24,19 @@ Puppet::Type.type(:aws_hosted_zone).provide(:api, :parent => Puppet_X::Bobtfish:
     r53.hosted_zones.create(resource[:name])
   end
   def destroy
-    @property_hash[:aws_item].delete
+    aws_item.delete
+    @property_hash[:ensure] = :absent
+  end
+
+  def purge
+    aws_item.rrsets.each do |rrset|
+      # can't delete NS/SOA to self
+      unless %w(NS SOA).include?(rrset.type)  and rrset.name == aws_item.name
+        rrset.delete
+      end
+    end
+    aws_item.delete
+    @property_hash[:ensure] = :purged
   end
 
 end

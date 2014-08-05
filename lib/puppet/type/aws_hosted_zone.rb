@@ -3,6 +3,12 @@ Puppet::Type.newtype(:aws_hosted_zone) do
   newparam(:name) do
     desc "Domain name"
   end
-  ensurable
+  ensurable do
+  	self.defaultvalues
+    newvalue(:purged) do
+      # removes any rrsets contained
+      @resource.provider.purge 
+    end
+  end
 end
 
