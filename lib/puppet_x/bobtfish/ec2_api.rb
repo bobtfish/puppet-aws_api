@@ -80,7 +80,7 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
 
   def self.default_creds
     {
-      :access_key_id => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']), 
+      :access_key_id => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']),
       :secret_access_key => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY'])
     }
   end
@@ -99,7 +99,7 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   def self.ec2()
     amazon_thing(AWS::EC2)
   end
-  def ec2
+  def ec2()
     self.class.ec2()
   end
 
@@ -117,6 +117,13 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
 
   def elb(region=None)
     self.class.elb(region)
+  end
+
+  def self.rds(region=None)
+    AWS::RDS.new(:region => region)
+  end
+  def rds(region=None)
+    self.class.rds(region)
   end
 
   def self.regions
@@ -186,7 +193,7 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
 
   def self.find_instance_profile_by_id(id)
     # No there really isn't a direct ID lookup API call, go figure
-    iam.client.list_instance_profiles[:instance_profiles].find do |profile| 
+    iam.client.list_instance_profiles[:instance_profiles].find do |profile|
       profile[:instance_profile_id] == id
     end
   end

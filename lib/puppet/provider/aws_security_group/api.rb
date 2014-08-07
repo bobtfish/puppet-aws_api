@@ -31,8 +31,9 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
         'sources' => perm.ip_ranges + perm.groups.map {|s| s.tags['Name']},
       }
     end
-    ingress = item.ingress_ip_permissions.map(&get_perms)
-    egress = item.egress_ip_permissions.map(&get_perms)
+
+    ingress = merge_sources(item.ingress_ip_permissions.map(&get_perms))
+    egress = merge_sources(item.egress_ip_permissions.map(&get_perms))
 
     new(
       :aws_item         => item,
@@ -51,7 +52,7 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
       instances_for_region(region_name).collect { |item| new_from_aws(region_name, item) }
     end.flatten
   end
-  
+
   read_only(:description, :vpc, :authorize_ingress, :authorize_egress)
 
   def authorize_ingress=(rules)
@@ -85,6 +86,18 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
   end
 
   private
+
+  def self.merge_sources(perms)
+    merged = {}
+    perms.each do |perm|
+      if merged[[perm['protocol'], perm['ports']]]
+        merged[[perm['protocol'], perm['ports']]]['sources'] += perm['sources']
+      else
+        merged[[perm['protocol'], perm['ports']]] = perm
+      end
+    end
+    merged.values
+  end
 
 
   def set_rules(sg, method, rules)

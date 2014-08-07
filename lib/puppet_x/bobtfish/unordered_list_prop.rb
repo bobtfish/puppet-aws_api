@@ -7,11 +7,11 @@ end
 # A custon property type for arrays of hashes with order-independent compare.
 class Puppet_X::Bobtfish::UnorderedValueListProperty < Puppet::Property
 	def should_to_s(newvalue)
-		PP.pp(newvalue.sort_by(&method(:sort_key)), "\n")
+		PP.pp(deep_sort(newvalue), "\n")
     end
 
     def is_to_s(currentvalue)
-    	PP.pp(currentvalue.sort_by(&method(:sort_key)), "\n")
+    	PP.pp(deep_sort(currentvalue), "\n")
     end
 
     def should
@@ -19,9 +19,23 @@ class Puppet_X::Bobtfish::UnorderedValueListProperty < Puppet::Property
     end
 
     def insync?(is)
-    	@should.sort_by(&method(:sort_key)) == is.sort_by(&method(:sort_key))
+        deep_sort(should) == deep_sort(is)
     end
     private
+    def deep_sort(value)
+        case value
+        when Hash
+            sorted_hsh = {}
+            value.each do |k, v|
+                sorted_hsh[k] = deep_sort(v)
+            end
+            sorted_hsh
+        when Array
+            value.sort_by(&method(:sort_key)).map(&method(:deep_sort))
+        else
+            value
+        end
+    end
     def sort_key(value)
         case value
         when Hash

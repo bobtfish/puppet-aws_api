@@ -39,7 +39,21 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
   end
   def create
     vpc = find_vpc_item_by_name(resource[:vpc])
-    subnet = vpc.subnets.create(resource[:cidr])
+
+    if resource[:unique_az_in_vpc]
+      if resource[:az]
+        fail "Can't specify az and use unique_az_in_vpc option for the same aws_subnet resource."
+      end
+      unused_azs = (ec2.availability_zones.map(&:name) -  vpc.subnets.map(&:availability_zone_name))
+      if unused_azs.empty?
+        fail "No AZs left in this VPC."
+      end
+      resource[:az] = unused_azs.first
+    end
+
+    subnet = vpc.subnets.create(resource[:cidr],
+        :availability_zone => resource[:az],
+    )
     wait_until_state subnet, :available
     tag_with_name subnet, resource[:name]
     tags = resource[:tags] || {}
