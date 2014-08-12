@@ -52,7 +52,7 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
     end
 
     subnet = vpc.subnets.create(resource[:cidr],
-        :availability_zone => resource[:az],
+        :availability_zone => resource[:az]
     )
     wait_until_state subnet, :available
     tag_with_name subnet, resource[:name]
