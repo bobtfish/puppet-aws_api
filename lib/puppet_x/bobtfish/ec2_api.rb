@@ -126,6 +126,13 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     self.class.rds(region)
   end
 
+  def self.elcc(region=None)
+    AWS::ElastiCache.new(:region => region)
+  end
+  def elcc(region=None)
+    self.class.elcc(region)
+  end
+
   def self.regions
     @@regions ||= begin
       if ENV['AWS_REGION'] and not ENV['AWS_REGION'].empty?
