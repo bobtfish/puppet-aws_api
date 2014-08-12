@@ -124,7 +124,12 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
             sg.vpc.security_groups.with_tag('Name', source).first
           end
         end
-        sg.send method, protocol, perm['ports'], *sources
+        case method
+        when :authorize_egress
+          sg.authorize_egress *sources, :protocol => protocol, :ports=>perm['ports']
+        when :authorize_ingress
+          sg.authorize_ingress protocol, perm['ports'], *sources
+        end
 
       end
     end
