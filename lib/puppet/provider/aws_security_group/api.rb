@@ -110,11 +110,7 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
     end
     if rules
       rules.each do |perm|
-        protocol = if perm['protocol'] == 'any'
-          -1 # obviously...?
-        else
-          perm['protocol']
-        end
+        protocol = perm['protocol'].to_sym
         sources = perm['sources'].map do |source|
           if source =~ /^\d+\.\d+\.\d+\.\d+\/\d+$/
             # IP CIDR
