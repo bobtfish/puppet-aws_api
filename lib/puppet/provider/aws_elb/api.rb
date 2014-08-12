@@ -31,8 +31,9 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     )
   end
   def self.instances
-    regions.collect{ |region| 
-      elb(region).load_balancers.collect { |item| new_from_aws(item) }}.flatten
+    regions.collect do |region|
+      elb(region).load_balancers.collect { |item| new_from_aws(item) }
+    end.flatten
   end
 
   read_only(:listeners, :subnets, :security_groups, :scheme, :health_check, :target)
@@ -40,7 +41,7 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   def instances=(value)
     wanted = value.map{|name| lookup(:aws_ec2_instance, name)}
     current = aws_item.instances.to_a
-    unwanted = current - wanted 
+    unwanted = current - wanted
     needed = wanted - current
     if unwanted.any?
       aws_item.instances.deregister(*unwanted)
@@ -49,7 +50,7 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       aws_item.instances.register(*needed)
     end
   end
-  
+
 
   def create
     listeners = resource[:listeners].map do |l|
@@ -70,7 +71,7 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :security_groups => resource[:security_groups].map{|s| lookup(:aws_security_group, s)},
       :scheme => resource[:scheme].to_s
     )
-    
+
     lb.configure_health_check(
         :healthy_threshold => resource['health_check']['healthy_threshold'].to_i,
         :unhealthy_threshold => resource['health_check']['unhealthy_threshold'].to_i,

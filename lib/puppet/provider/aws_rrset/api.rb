@@ -4,7 +4,7 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_rrset).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
 
-  
+
   def self.new_from_aws(zone, item)
     name = "#{item.type} #{item.name}"
     new(
@@ -34,9 +34,9 @@ Puppet::Type.type(:aws_rrset).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_a
     aws_item.update()
   end
 
-  
+
   def create
-    zone = self.class.find_hosted_zone_by_name(resource[:zone])    
+    zone = self.class.find_hosted_zone_by_name(resource[:zone])
     zone.rrsets.create(
       record_name,
       record_type,

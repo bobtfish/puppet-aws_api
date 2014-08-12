@@ -25,7 +25,7 @@ Puppet::Type.type(:aws_cgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   end
 
   read_only(:ip_address, :bgp_asn, :region, :type)
-  
+
   def create
     begin
       fail "Cannot create aws_cgw #{resource[:title]} without a region" unless resource[:region]

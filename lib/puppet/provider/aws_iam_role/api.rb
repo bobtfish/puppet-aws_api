@@ -15,7 +15,7 @@ Puppet::Type.type(:aws_iam_role).provide(:api, :parent => Puppet_X::Bobtfish::Ec
   def self.instances
     iam.client.list_roles.roles.collect { |item| new_from_aws(item) }
   end
-  
+
   read_only(:arn, :service_principal, :assume_role_policy_document)
 
   def service_principal

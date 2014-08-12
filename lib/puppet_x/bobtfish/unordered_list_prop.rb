@@ -6,7 +6,7 @@ module Puppet_X
 end
 # A custon property type for arrays of hashes with order-independent compare.
 class Puppet_X::Bobtfish::UnorderedValueListProperty < Puppet::Property
-	def should_to_s(newvalue)
+    def should_to_s(newvalue)
 		PP.pp(deep_sort(newvalue), "\n")
     end
 
@@ -15,7 +15,7 @@ class Puppet_X::Bobtfish::UnorderedValueListProperty < Puppet::Property
     end
 
     def should
-    	return @should
+        return @should
     end
 
     def insync?(is)

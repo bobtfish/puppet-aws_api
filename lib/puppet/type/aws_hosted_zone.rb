@@ -1,5 +1,5 @@
 Puppet::Type.newtype(:aws_hosted_zone) do
-  @doc = "Manage AWS Route 54 hosted zone"
+  @doc = "Manage AWS Route 53 hosted zone"
   newparam(:name) do
     desc "Domain name"
   end
