@@ -21,7 +21,7 @@ Puppet::Type.type(:aws_cache_cluster).provide(:api, :parent => Puppet_X::Bobtfis
     security_groups = item[:security_groups].collect do |sg|
       ec2.regions[region_name].security_groups[sg[:security_group_id]].name
     end
-    
+
     endpoint = if item[:engine] == 'redis'
       if item[:cache_nodes] and item[:cache_nodes].first[:endpoint]
         "#{item[:cache_nodes].first[:endpoint][:address]}:#{item[:cache_nodes].first[:endpoint][:port]}"
@@ -79,7 +79,7 @@ Puppet::Type.type(:aws_cache_cluster).provide(:api, :parent => Puppet_X::Bobtfis
   def engine_version=(version)
     update_cluster_property(:engine_version, version)
   end
-  
+
   def auto_minor_version_upgrade=(newval)
     update_cluster_property(:auto_minor_version_upgrade, newval)
   end
@@ -87,7 +87,7 @@ Puppet::Type.type(:aws_cache_cluster).provide(:api, :parent => Puppet_X::Bobtfis
   def create
     # Can't make VPC optional or we won't know what region we're in
     subnets = lookup(:aws_vpc, resource[:vpc]).subnets
-    
+
     if subnets.none?
       raise "Aws_vpc[#{resource[:vpc]}] given for Aws_cache_cluster[#{resource[:name]}] must have at least one subnet."
     end
@@ -127,9 +127,9 @@ Puppet::Type.type(:aws_cache_cluster).provide(:api, :parent => Puppet_X::Bobtfis
     )
     @property_hash[:ensure] = :absent
   end
-  
+
   private
-  
+
   def client
     elcc(
       @property_hash[:vpc_item].subnets.first.availability_zone.region_name
