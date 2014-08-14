@@ -72,7 +72,13 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
   end
 
   read_only(:image_id, :instance_type, :iam_role, :region, :subnet, :subnet, :key_name,
-    :elastic_ip, :block_device_mappings, :security_groups)
+    :elastic_ip, :block_device_mappings)
+
+  def security_groups=(sgs)
+    update_instance_property(:groups,  sgs.collect { |sg|
+      lookup(:aws_security_group, sg).id
+    })
+  end
 
   def create
     if aws_item
@@ -161,6 +167,15 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
     sda1.delete
     ip.delete
     @property_hash[:ensure] = :absent
+  end
+
+  private
+
+  def update_instance_property(property, value, apply_immediately=true)
+    aws_item.client.modify_instance_attribute(
+      :instance_id => aws_item.id,
+      property => value
+    )
   end
 end
 
