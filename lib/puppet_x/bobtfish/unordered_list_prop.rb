@@ -17,7 +17,6 @@ class Puppet_X::Bobtfish::UnorderedValueListProperty < Puppet::Property
     def should
         return @should
     end
-
     def insync?(is)
         deep_sort(should) == deep_sort(is)
     end
