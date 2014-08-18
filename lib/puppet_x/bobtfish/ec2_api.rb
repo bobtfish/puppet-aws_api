@@ -133,6 +133,14 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     self.class.elcc(region)
   end
 
+  def s3(region=None)
+    self.class.s3(region)
+  end
+
+  def self.s3(region=None)
+    AWS::S3.new(:region => region)
+  end
+
   def self.regions
     @@regions ||= begin
       if ENV['AWS_REGION'] and not ENV['AWS_REGION'].empty?
