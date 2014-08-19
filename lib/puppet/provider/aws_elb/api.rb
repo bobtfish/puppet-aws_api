@@ -39,7 +39,7 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   read_only(:listeners, :subnets, :security_groups, :scheme)
 
   def health_check=(check)
-    lb.configure_health_check(
+    aws_item.configure_health_check(
       :healthy_threshold => check['healthy_threshold'].to_i,
       :unhealthy_threshold => check['unhealthy_threshold'].to_i,
       :interval => check['interval'].to_i,
@@ -48,7 +48,7 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   end
 
   def target=(tgt)
-    lb.configure_health_check(
+    aws_item.configure_health_check(
       :target => tgt
     )
   end
