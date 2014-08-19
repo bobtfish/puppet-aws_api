@@ -30,10 +30,10 @@ Puppet::Type.newtype(:aws_elb) do
   end
   newproperty(:health_check) do
     defaultto({
-      :healthy_threshold => 10,
-      :unhealthy_threshold => 2,
-      :interval => 30,
-      :timeout => 5
+      "healthy_threshold" => "10",
+      "unhealthy_threshold" => "2",
+      "interval" => "30",
+      "timeout" => "5"
     })
   end
   newproperty(:target) do
