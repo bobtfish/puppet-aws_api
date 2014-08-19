@@ -36,7 +36,22 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     end.flatten
   end
 
-  read_only(:listeners, :subnets, :security_groups, :scheme, :health_check, :target)
+  read_only(:listeners, :subnets, :security_groups, :scheme)
+
+  def health_check=(check)
+    lb.configure_health_check(
+      :healthy_threshold => check['healthy_threshold'].to_i,
+      :unhealthy_threshold => check['unhealthy_threshold'].to_i,
+      :interval => check['interval'].to_i,
+      :timeout => check['timeout'].to_i,
+    )
+  end
+
+  def target=(tgt)
+    lb.configure_health_check(
+      :target => tgt
+    )
+  end
 
   def instances=(value)
     wanted = value.map{|name| lookup(:aws_ec2_instance, name)}
@@ -73,12 +88,12 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     )
 
     lb.configure_health_check(
-        :healthy_threshold => resource['health_check']['healthy_threshold'].to_i,
-        :unhealthy_threshold => resource['health_check']['unhealthy_threshold'].to_i,
-        :interval => resource['health_check']['interval'].to_i,
-        :timeout => resource['health_check']['timeout'].to_i,
-        :target => resource['target']
-      )
+      :healthy_threshold => resource['health_check']['healthy_threshold'].to_i,
+      :unhealthy_threshold => resource['health_check']['unhealthy_threshold'].to_i,
+      :interval => resource['health_check']['interval'].to_i,
+      :timeout => resource['health_check']['timeout'].to_i,
+      :target => resource['target']
+    )
     lb.instances.register( resource[:instances].map{|name| lookup(:aws_ec2_instance, name)} )
   end
 
