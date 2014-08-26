@@ -8,7 +8,6 @@ Puppet::Type.newtype(:aws_rds_instance) do
   newproperty(:db_instance_class)
   newproperty(:engine)
   newproperty(:engine_version)
-  newproperty(:region)
   newproperty(:master_username)
   newparam(:master_user_password)
   newproperty(:multi_az)

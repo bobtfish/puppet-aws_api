@@ -15,10 +15,11 @@ Puppet::Type.newtype(:aws_cache_cluster) do
   autorequire(:aws_security_group) do
     self[:security_groups]
   end
-  newproperty(:vpc) do
+  newproperty(:subnets, :parent => Puppet_X::Bobtfish::UnorderedValueListProperty) do
+    defaultto []
   end
-  autorequire(:aws_vpc) do
-    self[:vpc]
+  autorequire(:aws_subnet) do
+    self[:subnets]
   end
   newproperty(:auto_minor_version_upgrade)
   newproperty(:endpoint, :parent => Puppet_X::Bobtfish::ReadOnlyProperty) do
