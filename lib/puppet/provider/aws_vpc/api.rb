@@ -3,6 +3,8 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api) do
   mk_resource_methods
 
+  find_region_from :region
+
   def self.vpcs_for_region(region)
     ec2.regions[region].vpcs
   end

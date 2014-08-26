@@ -3,6 +3,8 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_iam_group).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api) do
   mk_resource_methods
 
+  find_region_from nil
+
   def self.new_from_aws(item)
     policies = Hash[item.policies.to_h.map { |k,v| [k,v.to_h] }]
     new(

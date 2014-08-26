@@ -3,6 +3,8 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_cache_cluster).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api) do
   mk_resource_methods
 
+  find_region_from :aws_subnet, :subnets
+
   def self.instances_for_region(region)
     elcc(region).client.describe_cache_clusters(
       :show_cache_node_info => true).data[:cache_clusters]

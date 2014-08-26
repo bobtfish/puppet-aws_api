@@ -1,9 +1,9 @@
 require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'puppet_x', 'bobtfish', 'aws_api.rb'))
 
-
 Puppet::Type.type(:aws_rrset).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api) do
   mk_resource_methods
 
+  find_region_from nil
 
   def self.new_from_aws(zone, item)
     name = "#{item.type} #{item.name}"

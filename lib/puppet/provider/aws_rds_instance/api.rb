@@ -3,6 +3,8 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_rds_instance).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api) do
   mk_resource_methods
 
+  find_region_from :aws_subnet, :subnets
+
   def self.instances_for_region(region)
     rds(region).client.describe_db_instances.data[:db_instances]
   end

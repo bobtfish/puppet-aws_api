@@ -4,6 +4,11 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api) do
   mk_resource_methods
 
+  def self.find_region(type)
+    vpc = catalog_lookup(type.catalog, :aws_vpc, type.vpc_name)
+    vpc.class.find_region(vpc.resource)
+  end
+
   def self.instances_for_region(region)
     ec2.regions[region].security_groups
   end

@@ -3,6 +3,8 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api) do
   mk_resource_methods
 
+  find_region_from :aws_vpc, :vpc
+
   def self.new_from_aws(item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id

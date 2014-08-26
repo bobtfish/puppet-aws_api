@@ -4,6 +4,8 @@ require 'set'
 Puppet::Type.type(:aws_iam_user).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api) do
   mk_resource_methods
 
+  find_region_from nil
+
   def self.new_from_aws(item)
     new(
       :aws_item         => item,

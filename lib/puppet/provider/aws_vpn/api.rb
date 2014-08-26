@@ -3,6 +3,16 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api) do
   mk_resource_methods
 
+  def self.find_region(type)
+    type_name, resource_name = if type[:vgw] and not type[:vgw].empty?
+      [:aws_vgw, type[:vgw]]
+    else
+      [:aws_cgw, type[:cgw]]
+    end
+    provider = catalog_lookup(type.catalog, type_name, resource_name)
+    provider.class.find_region(provider.resource)
+  end
+
   def self.new_from_aws(region_name, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
