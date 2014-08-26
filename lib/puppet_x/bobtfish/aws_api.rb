@@ -11,37 +11,74 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
 
   confine :true => HAVE_AWS_SDK
 
-  desc "Helper for Providers which use the AWS API"
+  desc "Helper for Providers which use the AWS APIs"
 
-  def self.instances
+
+
+  def self.aws_items_for_region(region)
     raise NotImplementedError
   end
 
+  def self.instance_from_aws_item(aws_item)
+    raise NotImplementedError
+  end
+
+  def self.find_region(type)
+    raise NotImplementedError
+  end
+
+  def self.instances
+    puts "WHAT ARE YOU DOING HERE??"
+    regions.map do |region|
+      aws_items_for_region(region).map do |aws_item|
+        instance_from_aws_item(aws_item)
+      end
+    end.flatten
+  end
+
   def self.prefetch(resources)
-    all_instances = if method(:instances).arity > 0
-      # This is so hacky, I am so sorry
-      instances(resources)
-    else
-      instances
-    end
-    all_instances.each do |provider|
-      if resource = resources[provider.name] then
-        resource.provider = provider
+    puts "PREFETCHING FOR #{self}..."
+    resources.values.map {|type|
+      type.class.defaultprovider.find_region(type)
+    }.uniq.each do |region|
+      aws_items_for_region(region).each do |aws_item|
+        provider = instance_from_aws_item(aws_item)
+        if resource = resources[provider.name] then
+          resource.provider = provider
+        end
       end
     end
   end
 
-  def lookup(type, name)
-    if not name or name =~ /^\s+$/
-      raise "Can't lookup #{type} with blank lookup-name"
+  # Lookup a `type_name` by the value of `property` in type
+  def self.lookup(type_name, type, property)
+    self.catalog_lookup(type.catalog, type_name, type[property])
+  end
+
+  def self.lookup_first(type_name, type, property)
+    self.catalog_lookup(type.catalog, type_name, type[property].first)
+  end
+
+  # Lookup a `type_name` by given `resource_name`
+  def lookup(type_name, resource_name)
+    self.class(resource.catalog, type_name, resource_name)
+  end
+
+  def self.catalog_lookup(catalog, type_name, resource_name)
+    if not resource_name or resource_name =~ /^\s+$/
+      raise "Can't lookup #{type_name} with blank lookup-name"
     end
-    # Lookup aws objects from prefetched catalog
-    # TODO: we can probably replace most find by name lookups with this?
-    found = resource.catalog.resource("#{type.capitalize}[#{name}]")
+    found = resource.catalog.resource("#{type_name.capitalize}[#{resource_name}]")
+    unless found
+      # Perhaps the referenced type was not yet prefetched?
+      puts "ATTEMPT PREFETCH #{type_name}"
+      self.prefetch(self.resources_by_provider(catalog, type_name))
+    end
+    found = resource.catalog.resource("#{type_name.capitalize}[#{resource_name}]")
     if found
-      return found.provider.aws_item
+      return found.provider
     else
-      raise "Lookup failed: #{type.capitalize}[#{name}] not found"
+      raise "Lookup failed: #{type_name.capitalize}[#{name}] not found"
     end
   end
 
@@ -49,6 +86,27 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
     methods.each do |ro_method|
       define_method("#{ro_method}=") do |v|
         fail "Can't change '#{ro_method}' for '#{name}' - property is read-only once #{resource.type} resource is created."
+      end
+    end
+  end
+
+  def self.find_region_from(type_name, property_name=nil)
+    if type_name.nil?
+      # this resources explicitly lacks a region
+      define_singleton_method :find_region do |type|
+        nil
+      end
+    elsif property_name.nil?
+      # region is directly available!
+      property_name = type_name
+      define_singleton_method :find_region do |type|
+        type[property_name]
+      end
+    else
+      # delegate to provider of related type
+      define_singleton_method :find_region do |type|
+        provider = lookup_first(type_name, type, property_name)
+        provider.class.find_region(provider.resource)
       end
     end
   end
@@ -84,66 +142,31 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
     }
   end
 
-  def self.amazon_thing(which)
-    which.new
+  @@apis = {}
+  def self.make_api(name, api_class)
+    define_method name do |*args|
+      self.class.send(name, *args)
+    end
+    define_singleton_method name do |*args|
+      region = args.first if args.any?
+      @@apis[name] ||= api_class.new(:region=>region)
+    end
   end
 
-  def self.iam()
-    amazon_thing(AWS::IAM)
-  end
-  def iam
-    self.class.iam()
-  end
+  make_api :iam,  AWS::IAM
+  make_api :ec2,  AWS::EC2
+  make_api :r53,  AWS::Route53
+  make_api :elb,  AWS::ELB
+  make_api :rds,  AWS::RDS
+  make_api :elcc, AWS::ElastiCache
+  make_api :s3,   AWS::S3
 
-  def self.ec2()
-    amazon_thing(AWS::EC2)
-  end
-  def ec2()
-    self.class.ec2()
-  end
 
-  def self.r53
-    amazon_thing(AWS::Route53)
-  end
-
-  def r53
-    self.class.r53
-  end
-
-  def self.elb(region = None)
-    AWS::ELB.new(:region => region)
-  end
-
-  def elb(region=None)
-    self.class.elb(region)
-  end
-
-  def self.rds(region=None)
-    AWS::RDS.new(:region => region)
-  end
-  def rds(region=None)
-    self.class.rds(region)
-  end
-
-  def self.elcc(region=None)
-    AWS::ElastiCache.new(:region => region)
-  end
-  def elcc(region=None)
-    self.class.elcc(region)
-  end
-
-  def s3(region=None)
-    self.class.s3(region)
-  end
-
-  def self.s3(region=None)
-    AWS::S3.new(:region => region)
-  end
 
   def self.regions
     @@regions ||= begin
-      if ENV['AWS_REGION'] and not ENV['AWS_REGION'].empty?
-        [ENV['AWS_REGION']]
+      if ENV['AWS_REGIONS'] and not ENV['AWS_REGIONS'].empty?
+        ENV['AWS_REGIONS'].split(',')
       elsif HAVE_AWS_SDK
         ec2.regions.collect { |r| r.name }
       else
@@ -152,9 +175,7 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
     end
   end
 
-  def regions
-    self.class.regions()
-  end
+
 
   def tags=(newtags)
     newtags.each { |k,v| @property_hash[:aws_item].add_tag(k, :value => v) }
@@ -230,6 +251,29 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
     end
     @property_hash[:aws_item].attach(vpc)
     @property_hash[:vpc] = vpc_name
+  end
+
+
+  # ruby <1.8 shim
+  if not self.respond_to? :define_singleton_method
+    def self.define_singleton_method(name, &block)
+      (class << self; self; end).send(:define_method, name, &block)
+    end
+  end
+
+
+  private
+
+  # Implementation copied Puppet::Transaction.resources_by_provider
+  # so we can call prefetch ourselves during the prefetch cycle
+  @@resources_by_provider = Hash.new { |h, k| h[k] = {} }
+  def self.resources_by_provider(catalog, type_name)
+    catalog.vertices.each do |resource|
+      if resource.class.attrclass(:provider)
+        @@resources_by_provider[resource.type][resource.name] = resource
+      end
+    end
+    @@resources_by_provider[type_name] || {}
   end
 
 
