@@ -6,13 +6,12 @@ module Puppet_X
   end
 end
 
-class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
+class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
   HAVE_AWS_SDK = begin; require 'aws-sdk'; true; rescue Exception; false; end
 
   confine :true => HAVE_AWS_SDK
 
-  desc "Helper for Providers which use the EC2 API"
-  self.initvars
+  desc "Helper for Providers which use the AWS API"
 
   def self.instances
     raise NotImplementedError

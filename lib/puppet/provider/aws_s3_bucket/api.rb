@@ -1,6 +1,6 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'puppet_x', 'bobtfish', 'ec2_api.rb'))
+require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'puppet_x', 'bobtfish', 'aws_api.rb'))
 
-Puppet::Type.type(:aws_s3_bucket).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
+Puppet::Type.type(:aws_s3_bucket).provide(:api, :parent => Puppet_X::Bobtfish::aws_api) do
   mk_resource_methods
 
   def self.instances_for_region(region)
@@ -10,7 +10,7 @@ Puppet::Type.type(:aws_s3_bucket).provide(:api, :parent => Puppet_X::Bobtfish::E
     self.class.instances_for_region region
   end
   def self.new_from_aws(region_name, item)
-    
+
     new(
       :aws_item         => item,
       :name             => item.name,
@@ -29,7 +29,7 @@ Puppet::Type.type(:aws_s3_bucket).provide(:api, :parent => Puppet_X::Bobtfish::E
 
   read_only(:region)
 
-  
+
 
   def create
     s3_region_string = if resource[:region] == 'us-east-1'
@@ -49,6 +49,6 @@ Puppet::Type.type(:aws_s3_bucket).provide(:api, :parent => Puppet_X::Bobtfish::E
     aws_item.delete!
     @property_hash[:ensure] = :purged
   end
-  
+
 end
 

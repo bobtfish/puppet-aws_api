@@ -1,6 +1,6 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'puppet_x', 'bobtfish', 'ec2_api.rb'))
+require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'puppet_x', 'bobtfish', 'aws_api.rb'))
 
-Puppet::Type.type(:aws_iam_role).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
+Puppet::Type.type(:aws_iam_role).provide(:api, :parent => Puppet_X::Bobtfish::aws_api) do
   mk_resource_methods
 
   def self.new_from_aws(item)
@@ -42,12 +42,12 @@ Puppet::Type.type(:aws_iam_role).provide(:api, :parent => Puppet_X::Bobtfish::Ec
       :policy_document => assume_role_policy_document
     )
   end
-  
+
   def permissions
     return nil unless @property_hash[:role_policies]
     @property_hash[:role_policies]['Statement']
   end
-  
+
   def permissions=(statements)
     iam.client.put_role_policy(
       :role_name => @property_hash[:name],
@@ -88,7 +88,7 @@ Puppet::Type.type(:aws_iam_role).provide(:api, :parent => Puppet_X::Bobtfish::Ec
     @property_hash[:ensure] = :absent
   end
 
-  
+
 
   def role_policy_name
     self.class.role_policy_name @property_hash[:name]
