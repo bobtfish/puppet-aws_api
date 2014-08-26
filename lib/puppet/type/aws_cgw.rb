@@ -22,7 +22,7 @@ Puppet::Type.newtype(:aws_cgw) do
   end
   newproperty(:region) do
     begin
-      Puppet_X::Bobtfish::aws_api.regions.each { |name| newvalue name }
+      Puppet_X::Bobtfish::Aws_api.regions.each { |name| newvalue name }
     rescue Exception
       []
     end

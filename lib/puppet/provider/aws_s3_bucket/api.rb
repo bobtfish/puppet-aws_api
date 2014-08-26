@@ -1,6 +1,6 @@
 require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'puppet_x', 'bobtfish', 'aws_api.rb'))
 
-Puppet::Type.type(:aws_s3_bucket).provide(:api, :parent => Puppet_X::Bobtfish::aws_api) do
+Puppet::Type.type(:aws_s3_bucket).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api) do
   mk_resource_methods
 
   def self.instances_for_region(region)
