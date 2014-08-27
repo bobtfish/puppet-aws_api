@@ -46,6 +46,10 @@ Puppet::Type.newtype(:aws_rrset) do
     end
   end
 
+  newparam(:targets, :array_matching => :all) do
+    desc "A list of other AWS resources which will be used to fill out placeholders in the value strings."
+  end
+
   newparam(:ec2_instance) do
       desc "For CNAME and A records only, an aws_ec2_instance name whose Elastic IP will be used in lieu of the value property."
   end
