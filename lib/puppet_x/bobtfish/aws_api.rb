@@ -140,16 +140,6 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
     item.add_tag 'Name', :value => name
   end
 
-  def get_creds
-    self.class.default_creds
-  end
-
-  def self.default_creds
-    {
-      :access_key_id => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']),
-      :secret_access_key => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY'])
-    }
-  end
 
   @@apis = {}
   def self.make_api(name, api_class)
