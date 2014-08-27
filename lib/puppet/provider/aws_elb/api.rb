@@ -1,6 +1,6 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'puppet_x', 'bobtfish', 'aws_api.rb'))
+require 'puppetx/bobtfish/aws_api'
 
-Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api) do
+Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppetx::Bobtfish::Aws_api) do
   mk_resource_methods
 
   find_region_from :aws_subnet, :subnets

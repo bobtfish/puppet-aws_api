@@ -1,12 +1,12 @@
 require 'rubygems'
 require 'puppet'
 
-module Puppet_X
+module Puppetx
   module Bobtfish
   end
 end
 
-class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
+class Puppetx::Bobtfish::Aws_api < Puppet::Provider
   HAVE_AWS_SDK = begin; require 'aws-sdk'; true; rescue Exception; false; end
 
   confine :true => HAVE_AWS_SDK

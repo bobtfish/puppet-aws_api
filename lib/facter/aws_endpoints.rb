@@ -1,9 +1,8 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', 'puppet_x', 'bobtfish', 'aws_api.rb'))
-puts "AWS_PROFILE is #{ENV['AWS_PROFILE']}"
+require 'puppetx/bobtfish/aws_api'
 
 Facter.add(:aws_endpoints) do
   setcode do
-    Hash[Puppet_X::Bobtfish::Aws_api.ec2.regions.map {|region|
+    Hash[Puppetx::Bobtfish::Aws_api.ec2.regions.map {|region|
       [region.name, region.endpoint]
     }]
   end

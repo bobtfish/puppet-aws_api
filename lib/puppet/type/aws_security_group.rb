@@ -1,4 +1,4 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'puppet_x', 'bobtfish', 'unordered_list_prop.rb'))
+require 'puppetx/bobtfish/type_helpers'
 
 Puppet::Type.newtype(:aws_security_group) do
   @doc = "Manage AWS Security Groups"
@@ -10,8 +10,8 @@ Puppet::Type.newtype(:aws_security_group) do
     self.vpc_name
   end
   newproperty(:tags)
-  newproperty(:authorize_ingress, :parent => Puppet_X::Bobtfish::UnorderedValueListProperty)
-  newproperty(:authorize_egress, :parent => Puppet_X::Bobtfish::UnorderedValueListProperty)
+  newproperty(:authorize_ingress, :parent => Puppetx::Bobtfish::UnorderedValueListProperty)
+  newproperty(:authorize_egress, :parent => Puppetx::Bobtfish::UnorderedValueListProperty)
 
   def vpc_name
     self[:name].split(':').first

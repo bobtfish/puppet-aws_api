@@ -1,4 +1,4 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'puppet_x', 'bobtfish', 'aws_api.rb'))
+require 'puppetx/bobtfish/aws_api'
 
 Puppet::Type.newtype(:aws_dopts) do
   @doc = "Manage AWS DHCP Options sets"
@@ -7,7 +7,7 @@ Puppet::Type.newtype(:aws_dopts) do
   newproperty(:tags)
   newproperty(:region) do
     begin
-      Puppet_X::Bobtfish::Aws_api.regions.each { |name| newvalue name }
+      Puppetx::Bobtfish::Aws_api.regions.each { |name| newvalue name }
     rescue Exception
       []
     end

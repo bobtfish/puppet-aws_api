@@ -1,5 +1,5 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'puppet_x', 'bobtfish', 'unordered_list_prop.rb'))
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'puppet_x', 'bobtfish', 'read_only_prop.rb'))
+require 'puppetx/bobtfish/type_helpers'
+
 Puppet::Type.newtype(:aws_ec2_instance) do
   @doc = "Manage AWS EC2 instances"
   newparam(:name)
@@ -12,8 +12,8 @@ Puppet::Type.newtype(:aws_ec2_instance) do
   newproperty(:tags)
   newparam(:associate_public_ip_address)
   newproperty(:elastic_ip)
-  newproperty(:block_device_mappings, :parent => Puppet_X::Bobtfish::UnorderedValueListProperty)
-  newproperty(:security_groups, :parent => Puppet_X::Bobtfish::UnorderedValueListProperty) do
+  newproperty(:block_device_mappings, :parent => Puppetx::Bobtfish::UnorderedValueListProperty)
+  newproperty(:security_groups, :parent => Puppetx::Bobtfish::UnorderedValueListProperty) do
     defaultto []
   end
 
@@ -27,7 +27,7 @@ Puppet::Type.newtype(:aws_ec2_instance) do
     self[:security_groups]
   end
 
-  newproperty(:public_ip_address, :parent => Puppet_X::Bobtfish::ReadOnlyProperty) do
+  newproperty(:public_ip_address, :parent => Puppetx::Bobtfish::ReadOnlyProperty) do
     desc "Read-only: public ip of machine"
   end
 end

@@ -2,6 +2,7 @@ Puppet::Type.newtype(:aws_rrset) do
   @doc = "Manage AWS Route 54 resource record sets"
   newparam(:name) do
     desc "Record type followed by name, space sparated (e.g. 'CNAME foo.example.com.')"
+    newvalues /^([A-Z]+)\s+([-a-z0-0\.]+)\.$/
   end
   ensurable
   newproperty(:zone) do
@@ -50,16 +51,8 @@ Puppet::Type.newtype(:aws_rrset) do
     desc "A list of other AWS resources which will be used to fill out placeholders in the value strings."
   end
 
-  newparam(:ec2_instance) do
-      desc "For CNAME and A records only, an aws_ec2_instance name whose Elastic IP will be used in lieu of the value property."
-  end
   autorequire(:aws_ec2_instance) do
     self[:ec2_instance]
-  end
-
-  newparam(:load_balancer) do
-      desc "For CNAME records only, an aws_elb name whose external DNS name will be used in lieu of the value property."
-      # TODO: we can definitely add A/AAAA alias target support to this if needed
   end
   autorequire(:aws_elb) do
     self[:load_balancer]
