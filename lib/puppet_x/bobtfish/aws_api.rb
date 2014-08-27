@@ -120,26 +120,6 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
     end
   end
 
-  def self.name_or_id(item)
-    return unless item
-    item.tags.to_h['Name'] || item.id
-  end
-  def name_or_id(item)
-    self.class.name_or_id(item)
-  end
-
-  def wait_until_status(item, status)
-    sleep 1 until item.status == status
-  end
-
-  def wait_until_state(item, state)
-    sleep 1 until item.state == state
-  end
-
-  def tag_with_name(item, name)
-    item.add_tag 'Name', :value => name
-  end
-
 
   @@apis = {}
   def self.make_api(name, api_class)
@@ -179,7 +159,6 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
 
 
 
-
   def self.regions
     @@regions ||= begin
       if ENV['AWS_REGIONS'] and not ENV['AWS_REGIONS'].empty?
@@ -192,67 +171,6 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
     end
   end
 
-
-
-  def tags=(newtags)
-    newtags.each { |k,v| @property_hash[:aws_item].add_tag(k, :value => v) }
-    @property_hash[:tags] = newtags
-  end
-
-  def self.find_dhopts_item_by_name(name)
-    @@dhoptions ||= begin
-      regions.collect do |region_name|
-        ec2.regions[region_name].dhcp_options.to_a
-      end.flatten
-    end
-    @@dhoptions.find do |dopt|
-      dopt_name = dopt.tags.to_h['Name'] || dopt.id
-      dopt_name == name || dopt.id == name
-    end
-  end
-
-  def find_dhopts_item_by_name(name)
-    self.class.find_dhopts_item_by_name(name)
-  end
-
-  def find_vpc_item_by_name(name)
-    @@vpcs ||= begin
-      regions.collect do |region_name|
-        ec2.regions[region_name].vpcs.to_a
-      end.flatten
-    end
-    @@vpcs.find do |vpc|
-      vpc_name = vpc.tags.to_h['Name'] || vpc.vpc_id
-      vpc_name == name
-    end
-  end
-
-  def find_region_name_for_vpc_name(name)
-    self.class.find_region_name_for_vpc_name(name)
-  end
-  def self.find_region_name_for_vpc_name(name)
-    regions.find do |region_name|
-      ec2.regions[region_name].vpcs.find do |vpc|
-        vpc_name = vpc.tags.to_h['Name'] || vpc.vpc_id
-        vpc_name == name
-      end
-    end
-  end
-
-  def self.find_hosted_zone_by_name(name)
-    r53.hosted_zones.find{|zone| zone.name == name }
-  end
-
-  def self.find_instance_profile_by_id(id)
-    # No there really isn't a direct ID lookup API call, go figure
-    iam.client.list_instance_profiles[:instance_profiles].find do |profile|
-      profile[:instance_profile_id] == id
-    end
-  end
-
-  def flush
-  end
-
   def exists?
     @property_hash[:ensure] == :present
   end
@@ -260,16 +178,6 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
   def aws_item
     @property_hash[:aws_item]
   end
-
-  def vpc=(vpc_name)
-    vpc = find_vpc_item_by_name(vpc_name)
-    if vpc.nil?
-      fail("Cannot find vpc #{vpc_name}")
-    end
-    @property_hash[:aws_item].attach(vpc)
-    @property_hash[:vpc] = vpc_name
-  end
-
 
   # ruby <1.8 shim
   if not self.respond_to? :define_singleton_method
