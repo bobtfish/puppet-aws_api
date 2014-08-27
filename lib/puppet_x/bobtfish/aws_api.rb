@@ -16,10 +16,15 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
 
 
   def self.aws_items_for_region(region)
-    raise NotImplementedError
+    if @collection
+      api(region).send(@collection.to_sym)
+    else
+      raise NotImplementedError
+    end
   end
 
-  def self.instance_from_aws_item(aws_item)
+
+  def self.instance_from_aws_item(region, aws_item)
     raise NotImplementedError
   end
 
@@ -31,7 +36,7 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
     puts "WHAT ARE YOU DOING HERE??"
     regions.map do |region|
       aws_items_for_region(region).map do |aws_item|
-        instance_from_aws_item(aws_item)
+        instance_from_aws_item(region, aws_item)
       end
     end.flatten
   end
@@ -41,8 +46,9 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
     resources.values.map {|type|
       type.class.defaultprovider.find_region(type)
     }.uniq.each do |region|
+      puts "Fetching for #{@primary_api} in region #{region}..."
       aws_items_for_region(region).each do |aws_item|
-        provider = instance_from_aws_item(aws_item)
+        provider = instance_from_aws_item(region, aws_item)
         if resource = resources[provider.name] then
           resource.provider = provider
         end
@@ -56,7 +62,9 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
   end
 
   def self.lookup_first(type_name, type, property)
-    self.catalog_lookup(type.catalog, type_name, type[property].first)
+    resource_name = type[property]
+    resource_name = resource_name.first unless resource_name.respond_to? :to_sym
+    self.catalog_lookup(type.catalog, type_name, resource_name.to_sym)
   end
 
   # Lookup a `type_name` by given `resource_name`
@@ -68,17 +76,18 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
     if not resource_name or resource_name =~ /^\s+$/
       raise "Can't lookup #{type_name} with blank lookup-name"
     end
-    found = resource.catalog.resource("#{type_name.capitalize}[#{resource_name}]")
+    found = catalog.resource("#{type_name.capitalize}[#{resource_name}]")
     unless found
       # Perhaps the referenced type was not yet prefetched?
       puts "ATTEMPT PREFETCH #{type_name}"
-      self.prefetch(self.resources_by_provider(catalog, type_name))
+      type = Puppet::Type.type(type_name)
+      type.defaultprovider.prefetch(self.resources_by_provider(catalog, type_name))
     end
-    found = resource.catalog.resource("#{type_name.capitalize}[#{resource_name}]")
+    found = catalog.resource("#{type_name.capitalize}[#{resource_name}]")
     if found
       return found.provider
     else
-      raise "Lookup failed: #{type_name.capitalize}[#{name}] not found"
+      raise "Lookup failed: #{type_name.capitalize}[#{resource_name}] not found"
     end
   end
 
@@ -153,6 +162,7 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
     end
   end
 
+
   make_api :iam,  AWS::IAM
   make_api :ec2,  AWS::EC2
   make_api :r53,  AWS::Route53
@@ -160,6 +170,23 @@ class Puppet_X::Bobtfish::Aws_api < Puppet::Provider
   make_api :rds,  AWS::RDS
   make_api :elcc, AWS::ElastiCache
   make_api :s3,   AWS::S3
+
+  # Configures which API to return when calling self.api()
+  # Optionally the :collection option provides a default
+  # implementation for aws_items_for_region
+  def self.primary_api(api_name, opts={})
+    @primary_api = api_name
+    @collection = opts[:collection]
+  end
+
+  def self.api(region=nil)
+    self.send(@primary_api, region)
+  end
+
+  def api
+    self.api(self.class.find_region(resource))
+  end
+
 
 
 

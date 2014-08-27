@@ -6,17 +6,15 @@ Puppet::Type.type(:aws_hosted_zone).provide(:api, :parent => Puppet_X::Bobtfish:
 
   find_region_from nil
 
-  def self.new_from_aws(item)
+  primary_api :r53, :collection => :hosted_zones
+
+  def self.instance_from_aws_item(region, item)
     new(
       :aws_item         => item,
       :name             => item.name,
       :ensure           => :present,
     )
   end
-  def self.instances
-    r53.hosted_zones.collect { |item| new_from_aws(item) }
-  end
-
 
   def create
     unless resource[:name].end_with? '.'

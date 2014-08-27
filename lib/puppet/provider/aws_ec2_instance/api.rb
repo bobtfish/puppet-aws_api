@@ -5,13 +5,9 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
 
   find_region_from :aws_subnet, :subnet
 
-  def self.instances_for_region(region)
-    ec2.regions[region].instances
-  end
-  def instances_for_region(region)
-    self.class.instances_for_region region
-  end
-  def self.new_from_aws(region_name, item)
+  primary_api :ec2, :collection => :instances
+
+  def self.instance_from_aws_item(region, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
 
@@ -45,7 +41,7 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       :name             => name,
       :id               => item.id,
       :ensure           => if item.status == :running then :present else item.status end,
-      :region           => region_name,
+      :region           => region,
       :image_id         => item.image_id,
       :instance_type    => item.instance_type,
       :iam_role         => profile,
@@ -57,20 +53,6 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish
       :security_groups  => item.security_groups.collect(&:name),
       :public_ip_address=> item.public_ip_address
     )
-  end
-
-  def self.instances
-    regions.collect do |region_name|
-      # Swapping out the default region like seems to be necessary (sometimes - it's not
-      # very deterministic), the subnet lookup can get confused otherwise.
-      prev_region_conf = AWS.config.region
-      AWS.config(:region => region_name)
-      results = instances_for_region(region_name).find_all(&:exists?).collect { |item|
-        new_from_aws(region_name, item)
-      }
-      AWS.config(:region => prev_region_conf)
-      results
-    end.flatten
   end
 
   read_only(:image_id, :instance_type, :iam_role, :region, :subnet, :subnet, :key_name,

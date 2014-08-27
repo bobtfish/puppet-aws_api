@@ -5,13 +5,9 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api
 
   find_region_from :region
 
-  def self.vpcs_for_region(region)
-    ec2.regions[region].vpcs
-  end
-  def vpcs_for_region(region)
-    self.class.vpcs_for_region region
-  end
-  def self.new_from_aws(region_name, item)
+  primary_api :ec2, :collection => :vpcs
+
+  def self.instance_from_aws_item(region, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     dopts_item = find_dhopts_item_by_name item.dhcp_options_id
@@ -27,16 +23,13 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api
       :cidr             => item.cidr_block,
       :dhcp_options     => dopts_name,
       :instance_tenancy => item.instance_tenancy.to_s,
-      :region           => region_name,
+      :region           => region,
       :tags             => tags
     )
   end
-  def self.instances
-    regions.collect do |region_name|
-      vpcs_for_region(region_name).collect { |item| new_from_aws(region_name, item) }
-    end.flatten
-  end
+
   read_only(:cidr, :id,  :region, :aws_dops, :instance_tenancy) # can't set ID can we?
+
   def dhcp_options=(value)
     dopts = find_dhopts_item_by_name(value)
     fail("Could not find dhcp options named '#{value}'") unless dopts

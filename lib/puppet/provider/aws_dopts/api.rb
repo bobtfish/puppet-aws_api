@@ -5,7 +5,9 @@ Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppet_X::Bobtfish::Aws_a
 
   find_region_from :region
 
-  def self.new_from_aws(region_name, item)
+  primary_api :ec2, :collection => :dhcp_options
+
+  def self.instance_from_aws_item(region, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     c = item.configuration
@@ -13,7 +15,7 @@ Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppet_X::Bobtfish::Aws_a
       :aws_item         => item,
       :name             => name,
       :id               => item.id,
-      :region           => region_name,
+      :region           => region,
       :ensure           => :present,
       :tags                 => tags,
       :domain_name          => c[:domain_name],
@@ -22,11 +24,6 @@ Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppet_X::Bobtfish::Aws_a
       :netbios_name_servers => c[:netbios_name_servers],
       :netbios_node_type    => c[:netbios_node_type].to_s
     )
-  end
-  def self.instances
-    regions.collect do |region_name|
-      ec2.regions[region_name].dhcp_options.collect { |item| new_from_aws(region_name,item) }
-    end.flatten
   end
 
   read_only(:domain_name, :ntp_servers, :netbios_name_servers, :netbios_node_type)

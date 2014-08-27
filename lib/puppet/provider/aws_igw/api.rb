@@ -5,7 +5,9 @@ Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api
 
   find_region_from :aws_vpc, :vpc
 
-  def self.new_from_aws(item)
+  primary_api :ec2, :collection => :internet_gateways
+
+  def self.instance_from_aws_item(region, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     vpc_name = nil
@@ -20,11 +22,6 @@ Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api
       :ensure           => :present,
       :tags             => tags
     )
-  end
-  def self.instances
-    regions.collect do |region_name|
-      ec2.regions[region_name].internet_gateways.collect { |item| new_from_aws(item) }
-    end.flatten
   end
 
   read_only(:vpc)

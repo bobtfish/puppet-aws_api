@@ -5,21 +5,22 @@ Puppet::Type.type(:aws_rrset).provide(:api, :parent => Puppet_X::Bobtfish::Aws_a
 
   find_region_from nil
 
-  def self.new_from_aws(zone, item)
+  primary_api :r53
+
+  def self.aws_items_for_region(region)
+    r53.hosted_zones.collect { |zone| zone.rrsets.to_a}.flatten
+  end
+
+  def self.instance_from_aws_item(region, item)
     name = "#{item.type} #{item.name}"
     new(
       :aws_item         => item,
       :name             => name,
       :ensure           => :present,
-      :zone             => zone.name,
+      :zone             => item.hosted_zone_id,
       :value            => item.resource_records.collect {|r| r[:value]},
       :ttl              => item.ttl.to_s,
     )
-  end
-  def self.instances
-    r53.hosted_zones.collect do |zone|
-      zone.rrsets.collect {|item| new_from_aws(zone, item)}
-    end.flatten
   end
 
   read_only(:zone)

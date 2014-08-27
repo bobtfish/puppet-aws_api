@@ -5,8 +5,9 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api
 
   find_region_from :aws_subnet, :subnets
 
+  primary_api :elb, :collection => :load_balancers
 
-  def self.new_from_aws(item)
+  def self.instance_from_aws_item(region, item)
 
     new(
       :aws_item         => item,
@@ -30,11 +31,6 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api
       :target           => item.health_check[:target],
       :instances        => item.instances.map {|i| i.tags['Name']}
     )
-  end
-  def self.instances
-    regions.collect do |region|
-      elb(region).load_balancers.collect { |item| new_from_aws(item) }
-    end.flatten
   end
 
   read_only(:listeners, :subnets, :security_groups, :scheme)

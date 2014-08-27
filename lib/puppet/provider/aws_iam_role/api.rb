@@ -5,7 +5,13 @@ Puppet::Type.type(:aws_iam_role).provide(:api, :parent => Puppet_X::Bobtfish::Aw
 
   find_region_from nil
 
-  def self.new_from_aws(item)
+  primary_api :iam
+
+  def self.aws_items_for_region(region)
+    iam.client.list_roles.roles
+  end
+
+  def self.instance_from_aws_item(region, item)
     role_policies = begin
       JSON.parse(URI.decode(
         iam.client.get_role_policy(
@@ -25,9 +31,6 @@ Puppet::Type.type(:aws_iam_role).provide(:api, :parent => Puppet_X::Bobtfish::Aw
       :role_policies    => role_policies,
       :ensure           => :present
     )
-  end
-  def self.instances
-    iam.client.list_roles.roles.collect { |item| new_from_aws(item) }
   end
 
   read_only(:arn, :service_principal, :assume_role_policy_document)

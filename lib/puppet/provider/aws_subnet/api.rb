@@ -5,13 +5,9 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Aws_
 
   find_region_from :aws_vpc, :vpc
 
-  def self.vpcs_for_region(region)
-    ec2.regions[region].vpcs
-  end
-  def vpcs_for_region(region)
-    self.class.vpcs_for_region region
-  end
-  def self.new_from_aws(vpc_id, item)
+  primary_api :ec2, :collection => :subnets
+
+  def self.instance_from_aws_item(region, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     new(
@@ -19,23 +15,15 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Aws_
       :name     => name,
       :id       => item.id,
       :ensure   => :present,
-      :vpc      => vpc_id,
+      :vpc      => item.vpc.tags['Name'] || item.vpc.id,
       :cidr     => item.cidr_block,
       :az       => item.availability_zone_name,
       :tags     => tags.to_hash
     )
   end
-  def self.instances
-    regions.collect do |region_name|
-      vpcs_for_region(region_name).collect do |vpc|
-        vpc_name = name_or_id vpc
-        vpc.subnets.collect do |item|
-          new_from_aws(vpc_name, item)
-        end
-      end.flatten
-    end.flatten
-  end
+
   read_only(:vpc, :cidr, :az, :route_table)
+
   def tags=(value)
     fail "Set tags not implemented yet"
   end

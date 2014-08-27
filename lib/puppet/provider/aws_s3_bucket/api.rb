@@ -5,28 +5,16 @@ Puppet::Type.type(:aws_s3_bucket).provide(:api, :parent => Puppet_X::Bobtfish::A
 
   find_region_from :region
 
-  def self.instances_for_region(region)
-    s3(region).buckets
-  end
-  def instances_for_region(region)
-    self.class.instances_for_region region
-  end
-  def self.new_from_aws(region_name, item)
+  primary_api :s3, :collection => :buckets
+
+  def self.instance_from_aws_item(region, item)
 
     new(
       :aws_item         => item,
       :name             => item.name,
       :ensure           => if item.exists? then :present else :absent end,
-      :region           => region_name,
+      :region           => region,
     )
-  end
-
-  def self.instances
-    regions.collect do |region_name|
-      instances_for_region(region_name).collect { |item|
-        new_from_aws(region_name, item)
-      }
-    end.flatten
   end
 
   read_only(:region)

@@ -13,7 +13,9 @@ Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api
     provider.class.find_region(provider.resource)
   end
 
-  def self.new_from_aws(region_name, item)
+  primary_api :ec2, :collection => :vpn_connections
+
+  def self.instance_from_aws_item(region, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     cgw_name = nil
@@ -30,16 +32,12 @@ Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api
       :id               => item.id,
       :cgw              => cgw_name,
       :vgw              => vgw_name,
-      :region           => region_name,
+      :region           => region,
       :ensure           => :present,
       :tags             => tags
     )
   end
-  def self.instances
-    regions.collect do |region_name|
-      ec2.regions[region_name].vpn_connections.reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(region_name,item) }
-    end.flatten
-  end
+
   read_only(:region, :vgw, :cgw, :type, :routing, :static_routes)
   def create
     begin

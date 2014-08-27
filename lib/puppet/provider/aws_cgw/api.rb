@@ -5,7 +5,9 @@ Puppet::Type.type(:aws_cgw).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api
 
   find_region_from :region
 
-  def self.new_from_aws(region_name, item)
+  primary_api :ec2, :collection => :customer_gateways
+
+  def self.instance_from_aws_item(region, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     new(
@@ -14,17 +16,13 @@ Puppet::Type.type(:aws_cgw).provide(:api, :parent => Puppet_X::Bobtfish::Aws_api
       :id         => item.id,
       :bgp_asn    => item.bgp_asn,
       :type       => 'ipsec.1', # FIXME
-      :region     => region_name,
+      :region     => region,
       :ip_address => item.ip_address,
-      :ensure     => :present,
+      :ensure     => :present, # TODO handle item.state :deleting and :deleted!!!
       :tags       => tags
     )
   end
-  def self.instances()
-    regions.collect do |region_name|
-      ec2.regions[region_name].customer_gateways.reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(region_name,item) }
-    end.flatten
-  end
+
 
   read_only(:ip_address, :bgp_asn, :region, :type)
 

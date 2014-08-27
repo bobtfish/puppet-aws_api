@@ -5,13 +5,13 @@ Puppet::Type.type(:aws_rds_instance).provide(:api, :parent => Puppet_X::Bobtfish
 
   find_region_from :aws_subnet, :subnets
 
-  def self.instances_for_region(region)
-    rds(region).client.describe_db_instances.data[:db_instances]
+  primary_api :rds
+
+  def self.aws_items_for_region(region)
+    api(region).client.describe_db_instances.data[:db_instances]
   end
-  def instances_for_region(region)
-    self.class.instances_for_region region
-  end
-  def self.new_from_aws(region_name, item)
+
+  def self.instance_from_aws_item(region, item)
     status = case item[:db_instance_status]
     when 'available'
       :present
@@ -25,12 +25,12 @@ Puppet::Type.type(:aws_rds_instance).provide(:api, :parent => Puppet_X::Bobtfish
 
 
     security_groups = item[:vpc_security_groups].collect do |sg|
-      ec2.regions[region_name].security_groups[sg[:vpc_security_group_id]].name
+      ec2.regions[region].security_groups[sg[:vpc_security_group_id]].name
     end
 
     subnets = if item[:db_subnet_group]
       item[:db_subnet_group][:subnets].collect do |sn|
-        ec2.regions[region_name].subnets[sn[:subnet_identifier]].tags['Name']
+        ec2.regions[region].subnets[sn[:subnet_identifier]].tags['Name']
       end
     else
       []
@@ -39,7 +39,7 @@ Puppet::Type.type(:aws_rds_instance).provide(:api, :parent => Puppet_X::Bobtfish
     new(
       :name             => item[:db_instance_identifier],
       :ensure           => status,
-      :region           => region_name,
+      :region           => region,
       :db_instance_class=> item[:db_instance_class],
       :engine           => item[:engine],
       :engine_version   => item[:engine_version],
@@ -54,14 +54,6 @@ Puppet::Type.type(:aws_rds_instance).provide(:api, :parent => Puppet_X::Bobtfish
 
   def aws_item
     rds(region).db_instances[@property_hash[:name]]
-  end
-
-  def self.instances
-    regions.collect do |region_name|
-      instances_for_region(region_name).collect { |item|
-        new_from_aws(region_name, item)
-      }
-    end.flatten
   end
 
   read_only(:region, :db_instance_class, :engine, :engine_version, :master_username, :multi_az, :endpoint)

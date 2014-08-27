@@ -6,7 +6,9 @@ Puppet::Type.type(:aws_iam_user).provide(:api, :parent => Puppet_X::Bobtfish::Aw
 
   find_region_from nil
 
-  def self.new_from_aws(item)
+  primary_api :iam, :collection => :users
+
+  def self.instance_from_aws_item(region, item)
     new(
       :aws_item         => item,
       :name             => item.name,
@@ -17,10 +19,9 @@ Puppet::Type.type(:aws_iam_user).provide(:api, :parent => Puppet_X::Bobtfish::Aw
       :ensure           => :present
     )
   end
-  def self.instances
-    iam.users.collect { |item| new_from_aws(item) }
-  end
-  read_only(:arn, :path, :name) # can name even change?, can arn actually be set?
+
+  read_only(:arn, :path, :name)
+
   def groups=(newgroups)
     groups_to_add = Set.new(newgroups).subtract(@property_hash[:groups]).to_a.map { |name| iam.groups[name] }
     groups_to_remove = Set.new(@property_hash[:groups]).subtract(newgroups).to_a.map { |name| iam.groups[name] }

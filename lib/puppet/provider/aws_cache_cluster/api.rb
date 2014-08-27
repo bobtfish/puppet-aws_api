@@ -5,14 +5,14 @@ Puppet::Type.type(:aws_cache_cluster).provide(:api, :parent => Puppet_X::Bobtfis
 
   find_region_from :aws_subnet, :subnets
 
-  def self.instances_for_region(region)
-    elcc(region).client.describe_cache_clusters(
+  primary_api :elcc
+
+  def self.aws_items_for_region(region)
+    api(region).client.describe_cache_clusters(
       :show_cache_node_info => true).data[:cache_clusters]
   end
-  def instances_for_region(region)
-    self.class.instances_for_region region
-  end
-  def self.new_from_aws(region_name, item)
+
+  def self.instance_from_aws_item(region, item)
     status = case item[:cache_cluster_status]
     when 'available'
       :present
@@ -21,7 +21,7 @@ Puppet::Type.type(:aws_cache_cluster).provide(:api, :parent => Puppet_X::Bobtfis
     end
 
     security_groups = item[:security_groups].collect do |sg|
-      ec2.regions[region_name].security_groups[sg[:security_group_id]].name
+      ec2.regions[region].security_groups[sg[:security_group_id]].name
     end
 
     endpoint = if item[:engine] == 'redis'
@@ -35,8 +35,8 @@ Puppet::Type.type(:aws_cache_cluster).provide(:api, :parent => Puppet_X::Bobtfis
     end
 
     vpc = if item[:cache_subnet_group_name]
-      ec2.regions[region_name].vpcs[
-        elcc(region_name).client.describe_cache_subnet_groups(
+      ec2.regions[region].vpcs[
+        elcc(region).client.describe_cache_subnet_groups(
           :cache_subnet_group_name => item[:cache_subnet_group_name]
         ).data[:cache_subnet_groups].first[:vpc_id]
       ]
@@ -55,14 +55,6 @@ Puppet::Type.type(:aws_cache_cluster).provide(:api, :parent => Puppet_X::Bobtfis
       :vpc              => vpc.tags['Name'],
       :security_groups  => security_groups
     )
-  end
-
-  def self.instances
-    regions.collect do |region_name|
-      instances_for_region(region_name).collect { |item|
-        new_from_aws(region_name, item)
-      }
-    end.flatten
   end
 
   read_only(

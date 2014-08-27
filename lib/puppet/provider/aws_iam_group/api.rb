@@ -5,7 +5,9 @@ Puppet::Type.type(:aws_iam_group).provide(:api, :parent => Puppet_X::Bobtfish::A
 
   find_region_from nil
 
-  def self.new_from_aws(item)
+  primary_api :iam, :collection => :groups
+
+  def self.instance_from_aws_item(region, item)
     policies = Hash[item.policies.to_h.map { |k,v| [k,v.to_h] }]
     new(
       :aws_item         => item,
@@ -16,9 +18,7 @@ Puppet::Type.type(:aws_iam_group).provide(:api, :parent => Puppet_X::Bobtfish::A
       :policies         => policies
     )
   end
-  def self.instances
-    iam.groups.collect { |item| new_from_aws(item) }
-  end
+
   read_only(:arn, :name, :policies) # can name even change?, can arn actually be set?
 
   def policies=(newpolicies)
