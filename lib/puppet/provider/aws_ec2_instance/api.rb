@@ -11,11 +11,6 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppetx::Bobtfish:
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
 
-    profile = nil
-    if item.iam_instance_profile_id
-      profile = find_instance_profile_by_id(item.iam_instance_profile_id)[:instance_profile_name]
-    end
-
     subnet = nil
     if item.subnet
       subnet = item.subnet.tags['Name']
@@ -44,7 +39,6 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppetx::Bobtfish:
       :region           => region,
       :image_id         => item.image_id,
       :instance_type    => item.instance_type,
-      :iam_role         => profile,
       :subnet           => subnet,
       :key_name         => key_pair,
       :tags             => tags,
@@ -62,6 +56,12 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppetx::Bobtfish:
     update_instance_property(:groups,  sgs.collect { |sg|
       lookup(:aws_security_group, sg).id
     })
+  end
+
+  def iam_role
+    @iam_role ||= begin
+      self.class.instance_profile[item.iam_instance_profile_id][:instance_profile_name]
+    end
   end
 
   def create

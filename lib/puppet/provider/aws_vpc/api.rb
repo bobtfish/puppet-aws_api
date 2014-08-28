@@ -10,23 +10,24 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
   def self.instance_from_aws_item(region, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
-    dopts_item = find_dhopts_item_by_name item.dhcp_options_id
-    dopts_name = nil
-    if dopts_item
-      dopts_name = name_or_id dopts_item
-    end
     new(
       :aws_item         => item,
       :name             => name,
       :id               => item.id,
       :ensure           => :present,
       :cidr             => item.cidr_block,
-      :dhcp_options     => dopts_name,
       :instance_tenancy => item.instance_tenancy.to_s,
       :region           => region,
       :tags             => tags
     )
   end
+
+  def dhcp_options
+    @dhcp_options ||= begin
+      lookup(:aws_dopts, aws_item.dhcp_options_id).name
+    end
+  end
+
 
   read_only(:cidr, :id,  :region, :aws_dops, :instance_tenancy) # can't set ID can we?
 

@@ -33,6 +33,12 @@ Puppet::Type.type(:aws_iam_role).provide(:api, :parent => Puppetx::Bobtfish::Aws
     )
   end
 
+  def flush
+    super
+    # invalidate our cached iam role profiles
+    self.class.instance_profiles.clear!
+  end
+
   read_only(:arn, :service_principal, :assume_role_policy_document)
 
   def service_principal

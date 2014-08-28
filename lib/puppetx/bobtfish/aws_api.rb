@@ -157,6 +157,17 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     self.api(self.class.find_region(resource))
   end
 
+  # Clearable cache of instance profiles
+  # (needed to efficiently work around lack of direct lookup in aws-api)
+  @@instance_profiles = {}
+  def self.instance_profiles
+    if @@instance_profiles.empty?
+      iam.client.list_instance_profiles[:instance_profiles].each do |profile|
+        @@instance_profiles[profile[:instance_profile_id]] = profile
+      end
+    end
+    @@instance_profiles
+  end
 
 
   def self.regions
