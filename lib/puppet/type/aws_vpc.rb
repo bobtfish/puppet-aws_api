@@ -1,3 +1,4 @@
+require 'puppetx/bobtfish/type_helpers'
 Puppet::Type.newtype(:aws_vpc) do
   @doc = "Manage AWS vpcs"
   newparam(:name)
@@ -9,7 +10,9 @@ Puppet::Type.newtype(:aws_vpc) do
     end
   end
   newproperty(:id)
-  newproperty(:region)
+  newproperty(:region) do
+    include Puppetx::Bobtfish::RequiredValue
+  end
   newproperty(:cidr)
   newproperty(:dhcp_options)
   autorequire(:aws_dopts) do
