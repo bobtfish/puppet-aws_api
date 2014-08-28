@@ -42,11 +42,10 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
   end
 
   def self.prefetch(resources)
-    puts "PREFETCHING FOR #{self}..."
     resources.values.map {|type|
       type.class.defaultprovider.find_region(type)
     }.uniq.each do |region|
-      puts "Fetching for #{@primary_api} in region #{region}..."
+      debug "AWS_API: Prefetching with #{@primary_api} api in region #{region}..."
       aws_items_for_region(region).each do |aws_item|
         provider = instance_from_aws_item(region, aws_item)
         if resource = resources[provider.name] then
@@ -79,7 +78,7 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     found = catalog.resource("#{type_name.capitalize}[#{resource_name}]")
     unless found
       # Perhaps the referenced type was not yet prefetched?
-      puts "ATTEMPT PREFETCH #{type_name}"
+      debug "AWS_API: Catalog lookup triggered prefetch for #{type_name}"
       type = Puppet::Type.type(type_name)
       type.defaultprovider.prefetch(self.resources_by_provider(catalog, type_name))
     end
