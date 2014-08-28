@@ -39,4 +39,19 @@ task :test => [
   :syntax,
   :lint,
   :spec,
+  'test:smoke',
 ]
+
+task :default => :test
+
+namespace :test do
+  smoke_tests = FileList['tests/*.pp'].map do |source|
+    task "smoke:#{File.basename(source, '.*')}" do
+      sh "puppet apply --test --noop --modulepath=.. #{source}"
+    end
+  end
+
+  desc "Execute the smoke tests"
+  task :smoke => smoke_tests
+end
+
