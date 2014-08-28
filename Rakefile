@@ -47,7 +47,14 @@ task :default => :test
 namespace :test do
   smoke_tests = FileList['tests/*.pp'].map do |source|
     task "smoke:#{File.basename(source, '.*')}" do
-      sh "puppet apply --test --noop --modulepath=.. #{source}"
+      opts = %w(--noop --modulepath=..)
+      unless verbose.nil?
+        opts << '--test'
+      end
+      if verbose
+        opts << '--debug'
+      end
+      sh "puppet apply #{opts.join(' ')}  #{source}"
     end
   end
 
