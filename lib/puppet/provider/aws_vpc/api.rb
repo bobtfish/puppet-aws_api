@@ -1,86 +1,57 @@
 require 'puppetx/bobtfish/aws_api'
 
 Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api) do
-  mk_resource_methods
+  include Puppetx::Bobtfish::TaggableProvider
+
+  flushing_resource_methods :read_only => %w(cidr region instance_tenancy)
 
   find_region_from :region
 
   primary_api :ec2, :collection => :vpcs
 
-  def self.instance_from_aws_item(region, item)
-    tags = item.tags.to_h
-    name = tags.delete('Name') || item.id
-    new(
-      :aws_item         => item,
-      :name             => name,
-      :id               => item.id,
-      :ensure           => :present,
-      :cidr             => item.cidr_block,
-      :instance_tenancy => item.instance_tenancy.to_s,
-      :region           => region,
-      :tags             => tags
+  ensure_from_state(:state,
+    :available => :present,
+  )
+
+  def init_property_hash
+    super
+    map_init(
+      :instance_tenancy,
+      :cidr => :cidr_block,
     )
+    init :dhcp_options, aws_item.dhcp_options.tags['Name']
   end
 
-  def dhcp_options
-    @dhcp_options ||= begin
-      lookup(:aws_dopts, aws_item.dhcp_options_id).name
-    end
-  end
-
-
-  read_only(:cidr, :id,  :region, :aws_dops, :instance_tenancy) # can't set ID can we?
-
-  def dhcp_options=(value)
-    dopts = find_dhopts_item_by_name(value)
-    fail("Could not find dhcp options named '#{value}'") unless dopts
-    @property_hash[:aws_item].dhcp_options = dopts.id
-    @property_hash[:dhcp_options] = value
-  end
-  def create
-    dhopts_name = nil
-    if resource[:dhcp_options]
-      dhopts = find_dhopts_item_by_name(resource[:dhcp_options])
-      fail("Cannot find dhcp options named '#{resource[:dhcp_options]}'") unless dhopts
-      dhopts_name = dhopts.id
+  def preventable_flush
+    creating? do
+      collection.create(resource[:cidr],
+        :instance_tenancy => resource[:instance_tenancy]
+      )
     end
 
-    vpc = ec2.regions[resource[:region]].vpcs.create(resource[:cidr])
-    wait_until_state vpc, :available
-    tag_with_name vpc, resource[:name]
-    tags = resource[:tags] || {}
-    tags.each { |k,v| vpc.add_tag(k, :value => v) }
-    # Tag-name the default SG for this VPC so we know we're managing it:
-    vpc.security_groups.find{|sg| sg.name == 'default'}.tags['Name'] = 'default'
-
-    if dhopts_name
-      vpc.dhcp_options = dhopts_name
+    flushing? :dhcp_options do |value|
+      aws_item.dhcp_options = lookup(:aws_dopts, value).aws_item
     end
-    vpc
 
+    super
   end
-  def destroy
-    @property_hash[:aws_item].delete
-    @property_hash[:ensure] = :absent
-  end
+
   def purge
-    vpc = @property_hash[:aws_item]
+    self.prevent_flush!
+
+    vpc = aws_item
     subnets = vpc.subnets
 
-    # First, any load balancers:
-    regions = subnets.collect do |sn|
-      sn.availability_zone.region_name
-    end
-    regions.each do |region|
-      elb(region).load_balancers.each do |lb|
-        if lb.subnets.all?{|sn| subnets.include?(sn)}
-          debug "Disposing of Elastic Load Balancer #{lb.name}"
-          lb.delete
-          sleep 1 until not lb.exists?
-        end
+    # First, any load balancers living exclusively on our subnets
+    elb.load_balancers.each do |lb|
+      if lb.subnets.all?{|sn| subnets.include?(sn)}
+        debug "Disposing of Elastic Load Balancer #{lb.name}"
+        lb.delete
+        wait_until { not lb.exists? }
       end
     end
-    # Freeze the current set
+
+    # Frozen copy of the current ec2 set
     instances = vpc.instances.to_a
 
     # Stop everything:
@@ -89,12 +60,14 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
       node.stop
     end
     instances.each do |node|
-      wait_until_status(node, :stopped)
+      wait_until { node.status == :stopped }
+
       # Dispose of EIPs
       eip = node.elastic_ip
       if eip
         debug "Releasing #{eip}"
         eip.disassociate
+        wait_until { not eip.associated? }
         eip.release
       end
       # Force-release volumes, and destroy them
@@ -102,8 +75,8 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
         debug "Detatching #{mnt}"
         volume = dev.volume
         dev.delete(:force => true)
-        wait_until_status(volume, :available)
-        debug "Disposing of #{dev.volume.tags['Name']}"
+        wait_until { volume.status == :available}
+        debug "Disposing of #{volume.tags['Name']}"
         volume.delete
       end
       debug "Terminating #{node.tags['Name']}"
@@ -113,7 +86,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
 
     instances.each do |node|
       # Ensure everyone is terminated or else clearing SGs will fail
-      wait_until_status(node, :terminated)
+      wait_until {node.status == :terminated }
     end
 
     # Security groups
@@ -146,7 +119,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
     # Finally, the VPC itself
     debug "Purging VPC #{vpc.tags['Name']}"
     vpc.delete
-    @property_hash[:ensure] = :purged
+    self.ensure = :purged
   end
 end
 

@@ -49,7 +49,7 @@ namespace :test do
     task "smoke:#{File.basename(source, '.*')}" do
       opts = %w(--noop --modulepath=..)
       unless verbose.nil?
-        opts << '--test'
+        opts << '--test --trace'
       end
       if verbose
         opts << '--debug'

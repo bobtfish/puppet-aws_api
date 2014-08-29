@@ -1,12 +1,8 @@
-require 'rubygems'
-require 'puppet'
-
 module Puppetx
   module Bobtfish
-    # A custon property type for arrays of hashes with order-independent compare.
     class ReadOnlyPropertyError < Exception
     end
-    class ReadOnlyProperty < ::Puppet::Property
+    module ReadOnlyProperty
       def should=(value)
           raise ReadOnlyPropertyError.new("Can't set read-only property #{name}")
       end
@@ -15,8 +11,7 @@ module Puppetx
       end
     end
 
-    # A custon property type for arrays of hashes with order-independent compare.
-    class UnorderedValueListProperty < ::Puppet::Property
+    module SortedDeepCompare
       def should_to_s(newvalue)
         PP.pp(deep_sort(newvalue), "\n")
       end
@@ -60,30 +55,92 @@ module Puppetx
     end
 
     module EnsureIntValue
-      def self.included(prop)
-        prop.validate do |value|
-          unless value =~ /^\d+$/
-            raise ArgumentError, "TTL must be a valid integer, got: #{value.inspect}"
-          end
-        end
-        prop.munge do |value|
-          value.to_i
+      def unsafe_validate(value)
+        unless value =~ /^\d+$/
+          raise ArgumentError, "#{resource} #{name} must be a valid integer, got: #{value.inspect}"
         end
       end
+
+      def unsafe_munge(value)
+        value.to_i
+      end
+
     end
 
+    module EnsureHashValue
+      def unsafe_validate(value)
+        unless value.is_a? Hash
+          raise ArgumentError, "#{resource} #{name} must be a Hash, got: #{value.inspect}"
+        end
+      end
 
+      def should
+        # the raw value please
+        @should
+      end
+
+      def default
+        {}
+      end
+    end
 
     module RequiredValue
       class ValueNotGiven
       end
-      def self.included(prop)
-        prop.defaultto ValueNotGiven
+
+      def default
+        ValueNotGiven
+      end
+
+      # suspend setters - work around for RAL search forcefully instantiating
+      # default values even though no types should even be involved
+      @@suspended = false
+      def self.suspend
+        @@suspended = true
+        returning = yield
+        @@suspended = false
+        returning
+      end
+
+      def value=(value)
+        super(value) unless @@suspended
       end
 
       def unsafe_validate(value)
         if value == ValueNotGiven
-          raise ArgumentError, "#{resource} requires a  #{name}!"
+          raise ArgumentError, "#{resource} requires a #{name}!"
+        end
+        super
+      end
+    end
+
+    module RegionValidation
+      def unsafe_validate(value)
+        super
+        unless Facter.value(:aws_regions).include? value
+          raise ArgumentError, "#{value} is not a valid region. (Valid regions are: #{Facter.value(:aws_regions)})"
+        end
+      end
+    end
+
+    module Purgable
+      def self.included(other)
+        other.defaultvalues
+        other.newvalue(:purged) do
+          resource.provider.purge
+        end
+      end
+    end
+
+    module CIDRValidation
+      # courtesy of http://blog.markhatton.co.uk/2011/03/15/regular-expressions-for-ip-addresses-cidr-ranges-and-hostnames/
+      PATTERN = /^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(\d|[1-2]\d|3[0-2]))$/
+      # note that AWS VPCs can't work with IPV6 ranges, so the above pattern shoudl suffice should suffice
+
+      def unsafe_validate(value)
+        super
+        unless value =~ PATTERN
+          raise ArgumentError, "#{value} is not a valid IPv4 CIDR"
         end
       end
     end
@@ -92,4 +149,12 @@ module Puppetx
 end
 
 
-
+# A horrible hack
+class Puppet::Indirector::Indirection
+  alias_method :original_search, :search
+  def search(*args)
+    Puppetx::Bobtfish::RequiredValue.suspend {
+      original_search(*args)
+    }
+  end
+end
