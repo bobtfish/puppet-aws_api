@@ -11,7 +11,11 @@ Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppetx::Bobtfish::Aws_ap
 
   primary_api :ec2, :collection => :dhcp_options
 
-  ensure_from_state :exists?
+  ensure_from_state(
+    true => :present,
+    false => :absent,
+    &:exists?
+  )
 
   def init_property_hash
     super
@@ -26,11 +30,12 @@ Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppetx::Bobtfish::Aws_ap
     end
   end
 
-  def preventable_flush
-    puts "FLUSH YOUR FACE"
-    puts resource[:domain_name_servers].inspect
-    puts resource[:ntp_servers].inspect
-    creating? do
+  def flush_when_ready
+    flushing :ensure => :absent do
+      aws_item.delete
+      return
+    end
+    flushing :ensure => :present do
       config = {
         :domain_name          => resource[:domain_name],
         :domain_name_servers  => resource[:domain_name_servers],

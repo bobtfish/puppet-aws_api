@@ -1,90 +1,87 @@
 require 'puppetx/bobtfish/aws_api'
 
 Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppetx::Bobtfish::Aws_api) do
-  mk_resource_methods
+  include Puppetx::Bobtfish::TaggableProvider
+
+  flushing_resource_methods :read_only => [
+    :description, :vpc, :authorize_ingress, :authorize_egress]
 
   def self.find_region(type)
-    vpc = catalog_lookup(type.catalog, :aws_vpc, type.vpc_name)
+    vpc = catalog_lookup(type.catalog, :aws_vpc, type.vpc_name).aws_item
     vpc.class.find_region(vpc.resource)
   end
 
   primary_api :ec2, :collection => :security_groups
 
-  def self.instance_from_aws_item(region, item)
-    tags = item.tags.to_h
-    name = tags.delete('Name') || item.id
-    if item.vpc_id
-      vpc = ec2.regions[region].vpcs[item.vpc_id].tags['Name']
-    else
-      vpc = nil
+  ensure_from_state(
+    true => :present,
+    false => :absent,
+    &:exists?
+  )
+
+  def init_property_hash
+    super
+    map_init(:description)
+    init :vpc, aws_item.vpc.tags['Name']
+    init :authorize_ingress, unmunge_rules(aws_item.ingress_ip_permissions)
+    init :authorize_egress, unmunge_rules(aws_item.egress_ip_permissions)
+  end
+
+  def flush_when_ready
+    flushing :ensure => :absent do
+      aws_item.delete
+      return
     end
-    get_perms = Proc.new do |perm|
-      if perm.port_range
-        ports = [perm.port_range.first, perm.port_range.last].map(&:to_s)
-        ports = ports[0] if ports[0] == ports[1]
-      else
-        ports = []
+
+    flushing :ensure => :create do
+      collection.create(resource[:name],
+        :description => resource[:description],
+        :vpc => lookup(:aws_vpc, resource[:vpc]).aws_item
+      )
+    end
+
+    flushing :authorize_ingress do |rules|
+      aws_item.ingress_ip_permissions.revoke
+      rules.each do |rule|
+        ports, protocol, sources = munge_rule(rule)
+        aws_item.authorize_ingress protocol, ports, *sources
       end
-      {
-        'protocol' => perm.protocol.to_s,
-        'ports' => ports,
-        'sources' => perm.ip_ranges + perm.groups.map {|s| s.tags['Name']},
-      }
     end
 
-    ingress = merge_sources(item.ingress_ip_permissions.map(&get_perms))
-    egress = merge_sources(item.egress_ip_permissions.map(&get_perms))
-
-    new(
-      :aws_item         => item,
-      :name             => name,
-      :id               => item.id,
-      :ensure           => :present,
-      :description      => item.description,
-      :vpc              => vpc,
-      :tags             => tags,
-      :authorize_ingress => ingress,
-      :authorize_egress  => egress
-    )
+    flushing :authorize_egress do |rules|
+      aws_item.egress_ip_permissions.revoke
+      rules.each do |rule|
+        ports, protocol, sources = munge_rule(rule)
+        aws_item.authorize_egress *sources, :protocol => protocol, :ports => ports
+      end
+    end
+    super
   end
 
-  read_only(:description, :vpc, :authorize_ingress, :authorize_egress)
-
-  def authorize_ingress=(rules)
-    set_rules(@property_hash[:aws_item], :authorize_ingress, rules)
-  end
-
-  def authorize_egress=(rules)
-    set_rules(@property_hash[:aws_item], :authorize_egress, rules)
-  end
-
-  def create
-    vpc = find_vpc_item_by_name(resource[:vpc])
-    sg = vpc.security_groups.create(
-      resource[:name],
-      :description => resource[:description],
-      :vpc => vpc
-    )
-
-    tag_with_name sg, resource[:name]
-    tags = resource[:tags] || {}
-    tags.each { |k,v| sg.add_tag(k, :value => v) }
-
-    set_rules(sg, :authorize_ingress, resource[:authorize_ingress])
-    set_rules(sg, :authorize_egress, resource[:authorize_egress])
-
-    sg
-  end
-  def destroy
-    @property_hash[:aws_item].delete
-    @property_hash[:ensure] = :absent
-  end
 
   private
 
-  def self.merge_sources(perms)
+  def unmunge_rules(rules)
+    merge_sources(rules.map(&method(:unmunge_rule)))
+  end
+
+  def unmunge_rule(perm)
+   if perm.port_range
+      ports = [perm.port_range.first, perm.port_range.last].map(&:to_s)
+      ports = ports[0] if ports[0] == ports[1]
+    else
+      ports = []
+    end
+    return {
+      'protocol' => perm.protocol.to_s,
+      'ports' => ports,
+      'sources' => perm.ip_ranges + perm.groups.map {|s| s.tags['Name']},
+    }
+  end
+
+  def merge_sources(rules)
     merged = {}
-    perms.each do |perm|
+    rules.each do |perm|
       if merged[[perm['protocol'], perm['ports']]]
         merged[[perm['protocol'], perm['ports']]]['sources'] += perm['sources']
       else
@@ -95,35 +92,20 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppetx::Bobtfis
   end
 
 
-  def set_rules(sg, method, rules)
-    listing_method_for = {
-      :authorize_ingress => :ingress_ip_permissions,
-      :authorize_egress => :egress_ip_permissions
-    }
-    sg.send(listing_method_for[method]).each do |rule|
-      rule.revoke
-    end
-    if rules
-      rules.each do |perm|
-        protocol = perm['protocol'].to_sym
-        sources = perm['sources'].map do |source|
-          if source =~ /^\d+\.\d+\.\d+\.\d+\/\d+$/
-            # IP CIDR
-            source
-          else
-            # must be another SG
-            sg.vpc.security_groups.with_tag('Name', source).first
-          end
-        end
-        case method
-        when :authorize_egress
-          sg.authorize_egress *sources, :protocol => protocol, :ports=>perm['ports']
-        when :authorize_ingress
-          sg.authorize_ingress protocol, perm['ports'], *sources
-        end
-
+  def munge_rule(rule)
+    protocol = rule['protocol'].to_sym
+    sources = rule['sources'].map do |source|
+      if source =~ Puppetx::Bobtfish::CIDRValidation::PATTERN
+        # CIDRs go in as-is
+        source
+      else
+        # must be another SG, grab reference
+        lookup(:aws_security_group, source).aws_item
       end
     end
+
+    return ports, protocol, rule['ports']
   end
+
 end
 

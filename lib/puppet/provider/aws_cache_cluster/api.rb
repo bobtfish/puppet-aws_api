@@ -1,141 +1,156 @@
 require 'puppetx/bobtfish/aws_api'
 
 Puppet::Type.type(:aws_cache_cluster).provide(:api, :parent => Puppetx::Bobtfish::Aws_api) do
-  mk_resource_methods
+
+  flushing_resource_methods :read_only => [
+    :cache_node_type,
+    :engine,
+    :vpc,
+    :endpoint
+  ]
 
   find_region_from :aws_subnet, :subnets
 
   primary_api :elcc
+
+  ensure_from_state(
+    :available => :present,
+    :creating => :available,
+  ) do |aws_item|
+    aws_refresh
+    aws_item[:cache_cluster_status]
+  end
 
   def self.aws_items_for_region(region)
     api(region).client.describe_cache_clusters(
       :show_cache_node_info => true).data[:cache_clusters]
   end
 
-  def self.instance_from_aws_item(region, item)
-    status = case item[:cache_cluster_status]
-    when 'available'
-      :present
-    else
-      :absent
-    end
-
-    security_groups = item[:security_groups].collect do |sg|
-      ec2.regions[region].security_groups[sg[:security_group_id]].name
-    end
-
-    endpoint = if item[:engine] == 'redis'
-      if item[:cache_nodes] and item[:cache_nodes].first[:endpoint]
-        "#{item[:cache_nodes].first[:endpoint][:address]}:#{item[:cache_nodes].first[:endpoint][:port]}"
-      end
-    else # memcached
-      if item[:configuration_endpoint]
-        "#{item[:configuration_endpoint][:address]}:#{item[:configuration_endpoint][:port]}"
-      end
-    end
-
-    vpc = if item[:cache_subnet_group_name]
-      ec2.regions[region].vpcs[
-        elcc(region).client.describe_cache_subnet_groups(
-          :cache_subnet_group_name => item[:cache_subnet_group_name]
+  def init_property_hash
+    super
+    map_init(
+      :cache_node_type,
+      :engine,
+      :engine_version,
+      :auto_minor_version_upgrade,
+      :name => :cache_cluster_id,
+    )
+    if aws_item[:cache_subnet_group_name]
+      vpc = ec2.vpcs[
+        elcc.client.describe_cache_subnet_groups(
+          :cache_subnet_group_name => aws_item[:cache_subnet_group_name]
         ).data[:cache_subnet_groups].first[:vpc_id]
       ]
+      init :vpc_item, vpc
+      init :vpc, vpc.tags['Name']
     end
 
-    new(
-      :aws_item         => item,
-      :vpc_item         => vpc,
-      :name             => item[:cache_cluster_id],
-      :ensure           => status,
-      :cache_node_type  => item[:cache_node_type],
-      :engine           => item[:engine],
-      :engine_version   => item[:engine_version],
-      :auto_minor_version_upgrade => item[:auto_minor_version_upgrade],
-      :endpoint         => endpoint,
-      :vpc              => vpc.tags['Name'],
-      :security_groups  => security_groups
-    )
-  end
-
-  read_only(
-    :cache_node_type,
-    :engine,
-    :vpc,
-    :endpoint,
-  )
-
-  def security_groups=(sgs)
-    update_cluster_property(:security_group_ids, sgs.collect { |sg|
-      lookup(:aws_security_group, sg).id
-    })
-  end
-
-  def engine_version=(version)
-    update_cluster_property(:engine_version, version)
-  end
-
-  def auto_minor_version_upgrade=(newval)
-    update_cluster_property(:auto_minor_version_upgrade, newval)
-  end
-
-  def create
-    # Can't make VPC optional or we won't know what region we're in
-    subnets = lookup(:aws_vpc, resource[:vpc]).subnets
-
-    if subnets.none?
-      raise "Aws_vpc[#{resource[:vpc]}] given for Aws_cache_cluster[#{resource[:name]}] must have at least one subnet."
+    endpoint = if aws_item[:engine] == 'redis'
+      if aws_item[:cache_nodes] and aws_item[:cache_nodes].first[:endpoint]
+        "#{aws_item[:cache_nodes].first[:endpoint][:address]}:#{aws_item[:cache_nodes].first[:endpoint][:port]}"
+      end
+    else # memcached
+      if aws_item[:configuration_endpoint]
+        "#{aws_item[:configuration_endpoint][:address]}:#{aws_item[:configuration_endpoint][:port]}"
+      end
     end
 
-    security_groups = resource[:security_groups].collect do |sg|
-      lookup(:aws_security_group, sg).id
+    init :endpoint, endpoint
+
+    init :security_groups, aws_item[:security_groups].collect{ |sg|
+      ec2.security_groups[sg[:security_group_id]].name
+    }
+
+  end
+
+  def flush_when_ready
+    flushing :ensure => :absent do
+      api.client.delete_cache_cluster(
+        :cache_cluster_id => resource[:name]
+      )
+
+      wait_until do
+        self.class.get_ensure_state(aws_item) == :absent
+      end
+      self.wait_for_state_transitions
+
+      api.client.delete_cache_subnet_group(
+        :cache_subnet_group_name => "#{resource[:name]}-sng"
+      )
+      return
     end
 
-    region = subnets.first.availability_zone.region_name
+    flushing :ensure => :create do
+      subnets = lookup(:aws_vpc, resource[:vpc]).subnets
 
-    sng_name = "#{resource[:name]}-sng"
+      if subnets.none?
+        # TODO: move to type validation
+        raise "Aws_vpc[#{resource[:vpc]}] given for Aws_cache_cluster[#{resource[:name]}] must have at least one subnet."
+      end
 
-    elcc(region).client.create_cache_subnet_group(
-      :cache_subnet_group_name => sng_name,
-      :cache_subnet_group_description => "Generated for #{resource[:name]}",
-      :subnet_ids => subnets.map(&:id)
-    )
+      security_groups = resource[:security_groups].collect do |sg|
+        lookup(:aws_security_group, sg).id
+      end
 
-    elcc(region).client.create_cache_cluster(
-      :cache_cluster_id           => resource[:name],
-      :num_cache_nodes            => 1, # only valid option for for redis
-      :cache_node_type            => resource[:cache_node_type],
-      :engine                     => resource[:engine].to_s,
-      :engine_version             => resource[:engine_version],
-      :cache_subnet_group_name    => sng_name,
-      :security_group_ids         => security_groups,
-      :auto_minor_version_upgrade => resource[:auto_minor_version_upgrade],
-    )
+      region = subnets.first.availability_zone.region_name
+
+      sng_name = "#{resource[:name]}-sng"
+
+      api.client.create_cache_subnet_group(
+        :cache_subnet_group_name => sng_name,
+        :cache_subnet_group_description => "Generated for #{resource[:name]}",
+        :subnet_ids => subnets.map(&:id)
+      )
+
+      @property_hash[:aws_item] = api.client.create_cache_cluster(
+        :cache_cluster_id           => resource[:name],
+        :num_cache_nodes            => 1, # only valid option for for redis
+        :cache_node_type            => resource[:cache_node_type],
+        :engine                     => resource[:engine].to_s,
+        :engine_version             => resource[:engine_version],
+        :cache_subnet_group_name    => sng_name,
+        :security_group_ids         => security_groups,
+        :auto_minor_version_upgrade => resource[:auto_minor_version_upgrade],
+      )
+      # We just flushed these:
+      @property_flush.delete(:security_groups)
+      @property_flush.delete(:engine_version)
+      @property_flush.delete(:auto_minor_version_upgrade)
+    end
+
+    flushing :security_groups, :engine_version, :auto_minor_version_upgrade do |sgs, ev, amvu|
+      client.modify_cache_cluster(
+        :cache_cluster_id => resource[:name],
+        :apply_immediately => true,
+        :security_groups => sgs.collect { |sg| lookup(:aws_security_group, sg).aws_item.id },
+        :engine_version => ev,
+        :auto_minor_version_upgrade => amvu
+      )
+    end
+
+
   end
-  def destroy
-    client.delete_cache_cluster(
-      :cache_cluster_id => @property_hash[:name]
-    )
-    # TODO: wait
-    client.delete_cache_subnet_group(
-      :cache_subnet_group_name => "#{@property_hash[:name]}-sng"
-    )
-    @property_hash[:ensure] = :absent
+
+
+  def substitutions
+    {
+      :cname => aws_item[:configuration_endpoint][:address],
+      :port => aws_item[:configuration_endpoint][:port],
+    }
   end
 
-  private
-
-  def client
-    elcc(
-      @property_hash[:vpc_item].subnets.first.availability_zone.region_name
-    ).client
+  def aws_refresh
+    @property_hash[:aws_item] = api.client.describe_cache_clusters(
+      :cache_cluster_id => aws_item[:cache_cluster_id],
+      :show_cache_node_info => true,
+    ).data[:cache_clusters][0]
   end
 
-  def update_cluster_property(property, value, apply_immediately=true)
-    client.modify_cache_cluster(
-      :cache_cluster_id => @property_hash[:name],
-      :apply_immediately => apply_immediately,
-      property => value
-    )
+  def vpc_item
+    @property_hash[:vpc_item]
   end
+
+
+
 end
 

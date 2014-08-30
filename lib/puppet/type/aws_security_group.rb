@@ -9,9 +9,20 @@ Puppet::Type.newtype(:aws_security_group) do
   autorequire(:aws_vpc) do
     self.vpc_name
   end
-  newproperty(:tags)
-  newproperty(:authorize_ingress, :parent => Puppetx::Bobtfish::UnorderedValueListProperty)
-  newproperty(:authorize_egress, :parent => Puppetx::Bobtfish::UnorderedValueListProperty)
+
+  newproperty(:tags) do
+    include Puppetx::Bobtfish::EnsureHashValue
+  end
+
+  newproperty(:authorize_ingress) do
+    include Puppetx::Bobtfish::SortedDeepCompare
+    include Puppetx::Bobtfish::PermissionCollection
+  end
+
+  newproperty(:authorize_egress) do
+    include Puppetx::Bobtfish::SortedDeepCompare
+    include Puppetx::Bobtfish::PermissionCollection
+  end
 
   def vpc_name
     self[:name].split(':').first

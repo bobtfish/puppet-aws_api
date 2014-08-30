@@ -1,25 +1,24 @@
 require 'puppetx/bobtfish/aws_api'
 
 Puppet::Type.type(:aws_s3_bucket).provide(:api, :parent => Puppetx::Bobtfish::Aws_api) do
-  mk_resource_methods
+  flushing_resource_methods :read_only => [:region]
 
   find_region_from :region
 
   primary_api :s3, :collection => :buckets
 
-  def self.instance_from_aws_item(region, item)
-
-    new(
-      :aws_item         => item,
-      :name             => item.name,
-      :ensure           => if item.exists? then :present else :absent end,
-      :region           => region,
-    )
+  def init_property_hash
+    super
+    map_init(:name)
   end
 
-  read_only(:region)
+  def substitutions
+    {
+      :url => aws_item.url
+    }
+  end
 
-
+  # TODO: use flush (though this works fine)
 
   def create
     s3_region_string = if resource[:region] == 'us-east-1'

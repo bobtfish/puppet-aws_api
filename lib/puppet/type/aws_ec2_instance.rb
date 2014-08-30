@@ -7,10 +7,12 @@ Puppet::Type.newtype(:aws_ec2_instance) do
 
   newproperty(:image_id) do
     include Puppetx::Bobtfish::RequiredValue
+    newvalues /^ami-[a-f0-9]+$/
   end
 
   newproperty(:instance_type) do
     include Puppetx::Bobtfish::RequiredValue
+    newvalues /^t\d\.\w+$/
   end
 
   newproperty(:iam_role)
@@ -23,16 +25,26 @@ Puppet::Type.newtype(:aws_ec2_instance) do
     include Puppetx::Bobtfish::RequiredValue
   end
 
-  newproperty(:tags)
+  newproperty(:tags) do
+    include Puppetx::Bobtfish::EnsureHashValue
+  end
 
-  newparam(:associate_public_ip_address)
 
-  newproperty(:elastic_ip)
+  newparam(:associate_public_ip_address, :boolean => true)
 
-  newproperty(:block_device_mappings, :parent => Puppetx::Bobtfish::UnorderedValueListProperty)
+  newproperty(:elastic_ip, :boolean => true)
 
-  newproperty(:security_groups, :parent => Puppetx::Bobtfish::UnorderedValueListProperty) do
-    defaultto []
+  newproperty(:block_device_mappings) do
+    defaultto {}
+    include Puppetx::Bobtfish::SortedDeepCompare
+  end
+
+  newproperty(:security_groups) do
+    defaultto do
+      sn = resource.provider.lookup(:aws_subnet, resource[:subnet])
+      ["#{sn.resource[:vpc]}:default"]
+    end
+    include Puppetx::Bobtfish::SortedDeepCompare
   end
 
   autorequire(:aws_subnet) do
@@ -45,8 +57,11 @@ Puppet::Type.newtype(:aws_ec2_instance) do
     self[:security_groups]
   end
 
-  newproperty(:public_ip_address, :parent => Puppetx::Bobtfish::ReadOnlyProperty) do
+  newproperty(:public_ip_address) do
     desc "Read-only: public ip of machine"
+    include Puppetx::Bobtfish::ReadOnlyProperty
   end
+
+  newparam(:user_data)
 end
 

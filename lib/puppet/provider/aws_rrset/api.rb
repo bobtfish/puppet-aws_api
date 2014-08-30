@@ -1,38 +1,59 @@
 require 'puppetx/bobtfish/aws_api'
 
 Puppet::Type.type(:aws_rrset).provide(:api, :parent => Puppetx::Bobtfish::Aws_api) do
-  mk_resource_methods
+
+  flushing_resource_methods :read_only => [:zone]
 
   find_region_from nil
 
   primary_api :r53
 
+  ensure_from_state(
+    true => :present,
+    false => :absent,
+    &:exists?
+  )
+
   def self.aws_items_for_region(region)
     r53.hosted_zones.collect { |zone| zone.rrsets.to_a}.flatten
   end
 
-  def self.instance_from_aws_item(region, item)
-    name = "#{item.type} #{item.name}"
-    new(
-      :aws_item         => item,
-      :name             => name,
-      :ensure           => :present,
-      :zone             => item.hosted_zone_id,
-      :value            => item.resource_records.collect {|r| r[:value]},
-      :ttl              => item.ttl.to_s,
+  def init_property_hash
+    super
+    map_init(
+      :ttl,
+      :zone => :hosted_zone_id
     )
+    init :name, "#{record_type} #{record_name}"
+    init :value, aws_item.resource_records.collect {|r| r[:value]} # match targets?
   end
 
-  read_only(:zone)
 
-  def value=(value)
-    aws_item.resource_records = get_resource_records
-    aws_item.update()
+
+  def record_type
+    aws_item.type
   end
 
-  def ttl=(value)
-    aws_item.ttl = value
-    aws_item.update()
+  def record_name
+    aws_item.name
+  end
+
+  def flush_when_ready
+    flushing :ensure => :absend do
+      aws_item.delete
+      return
+    end
+
+    flushing :ensure => :present do
+      zone = lookup(:aws_hosted_zone, resource[:zone])
+      zone.rrsets.create(
+        record_name,
+        record_type,
+        :ttl => resource[:ttl].to_i,
+        :resource_records => get_resource_records,
+      )
+    end
+
   end
 
 
@@ -45,28 +66,15 @@ Puppet::Type.type(:aws_rrset).provide(:api, :parent => Puppetx::Bobtfish::Aws_ap
       :resource_records => get_resource_records,
     )
   end
+
   def destroy
     @property_hash[:aws_item].delete
-  end
-
-  def record_type
-    record_type = split_name[0]
-  end
-
-  def record_name
-    record_type = split_name[1]
   end
 
   private
 
   def split_name
-    @split_name ||= begin
-      resource[:name].split(' ').tap do |split|
-        if split.length != 2
-          raise 'AWS resource record set name MUST be in the form of "<type> <name>" - e.g. "CNAME foo.example.com."'
-        end
-      end
-    end
+    @split_name ||= @property_hash[:name].split(' ')
   end
 
   def get_resource_records

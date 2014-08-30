@@ -13,19 +13,23 @@ Puppet::Type.newtype(:aws_rds_instance) do
   newproperty(:multi_az)
   newparam(:publicly_accessible)
 
-  newproperty(:subnets, :parent => Puppetx::Bobtfish::UnorderedValueListProperty)
+  newproperty(:subnets) do
+    include Puppetx::Bobtfish::SortedDeepCompare
+  end
   autorequire(:aws_subnet) do
     self[:subnets]
   end
 
-  newproperty(:security_groups, :parent => Puppetx::Bobtfish::UnorderedValueListProperty) do
+  newproperty(:security_groups) do
+    include Puppetx::Bobtfish::SortedDeepCompare
     defaultto []
   end
   autorequire(:aws_security_group) do
     self[:security_groups]
   end
 
-  newproperty(:endpoint, :parent => Puppetx::Bobtfish::ReadOnlyProperty) do
+  newproperty(:endpoint) do
+    include Puppetx::Bobtfish::ReadOnlyProperty
     desc "Read-only: endpoint DNS name for this DB"
   end
 end

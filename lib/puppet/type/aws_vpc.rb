@@ -3,7 +3,7 @@ Puppet::Type.newtype(:aws_vpc) do
   @doc = "Manage AWS vpcs"
   newparam(:name)
   ensurable do
-    include Puppetx::Bobtfish::Purgable
+    newvalues :present, :absent, :purged
   end
 
   newproperty(:region) do

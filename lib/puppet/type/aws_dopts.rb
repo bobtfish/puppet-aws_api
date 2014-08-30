@@ -24,7 +24,7 @@ Puppet::Type.newtype(:aws_dopts) do
   end
 
   newproperty(:domain_name_servers, :array_matching => :all) do
-    defaultto 'AmazonProvidedDNS'
+    defaultto ['AmazonProvidedDNS']
   end
 
   newproperty(:ntp_servers, :array_matching => :all) do
@@ -42,6 +42,7 @@ Puppet::Type.newtype(:aws_dopts) do
         raise ArgumentError , "'%s' is not a valid netbios_node_type, can be [1248]" % value
       end
     end
+    include Puppetx::Bobtfish::EnsureIntValue
   end
 end
 

@@ -9,8 +9,10 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
 
   primary_api :ec2, :collection => :vpcs
 
-  ensure_from_state(:state,
+  ensure_from_state(
     :available => :present,
+    :pending => :available,
+    &:state
   )
 
   def init_property_hash
@@ -22,23 +24,31 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
     init :dhcp_options, aws_item.dhcp_options.tags['Name']
   end
 
-  def preventable_flush
-    creating? do
+  def flush_when_ready
+    flushing :ensure => :purged do
+      self.purge_vpc
+      return
+    end
+    flushing :ensure => :absent do
+      aws_item.delete
+      return
+    end
+
+    flushing :ensure => :present do
       collection.create(resource[:cidr],
         :instance_tenancy => resource[:instance_tenancy]
       )
     end
 
-    flushing? :dhcp_options do |value|
+    flushing :dhcp_options do |value|
       aws_item.dhcp_options = lookup(:aws_dopts, value).aws_item
     end
 
     super
   end
 
-  def purge
-    self.prevent_flush!
 
+  def purge_vpc
     vpc = aws_item
     subnets = vpc.subnets
 
@@ -99,9 +109,10 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
     # Gateways
     igw = vpc.internet_gateway
     if igw
-      debug "Detach Internet Gateway: #{igw.tags['Name']}"
+      igw_id = igw.tags['Name'] || igw.id
+      debug "Detach Internet Gateway: #{igw_id}"
       igw.detach(vpc)
-      debug "Disposing of #{igw.tags['Name']}"
+      debug "Disposing of #{igw_id}"
       igw.delete
     end
 
@@ -119,7 +130,6 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
     # Finally, the VPC itself
     debug "Purging VPC #{vpc.tags['Name']}"
     vpc.delete
-    self.ensure = :purged
   end
 end
 

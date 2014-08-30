@@ -31,13 +31,18 @@ Puppet::Type.newtype(:aws_rrset) do
   newproperty(:value, :array_matching => :all) do
     defaultto []
     desc "The record value string (array of strings for multiple lines)"
+    # TODO: validation, document placeholders
+    def unsafe_munge(value)
+      self.resource.fill_targets(value)
+    end
   end
 
   VALID_TARGET_TYPES = [
     :aws_ec2_instance,
     :aws_elb,
     :aws_cache_cluster,
-    :aws_s3_bucket
+    :aws_s3_bucket,
+    :aws_rds_instance,
   ]
 
   VALID_TARGET_TYPES.each do|type|
@@ -50,6 +55,9 @@ Puppet::Type.newtype(:aws_rrset) do
     defaultto []
     desc "An array of other AWS resources which will be used to fill out  placeholders in their corresponding value lines."
     validate do |value|
+      if !value.nil? and value.any? and value.size != resource[:value].size
+        raise ArgumentError, "You most provide a target for each RRSET value! (You have #{resource[:value].size} record value(s) but #{value.size} target(s)...)"
+      end
       value.each do |target|
         unless target.is_a? Puppet::Resource
           raise ArgumentError, "Aws_rrset targets must be direct references to another valid AWS resource."
@@ -64,6 +72,18 @@ Puppet::Type.newtype(:aws_rrset) do
   newproperty(:ttl) do
       desc "TTL in seconds"
       include Puppetx::Bobtfish::EnsureIntValue
+  end
+
+  def fill_targets(record_values)
+    targets = self[:targets]
+    if targets.nil? or targets.empty?
+      # nothing to fill with, we're not doing substitutions
+      return record_values
+    end
+    record_values.each_with_index.map do |i, record|
+      record % targets[i].provider.substitutions
+    end
+
   end
 
   private
