@@ -209,3 +209,25 @@ Patches are generally very welcome! Please submit a pull request on github, pref
 Bug reports are also very welcome - please feel free to report an issue and I'll see what I can do about fixing it for you :)
 
 
+### For developers: `Puppetx::Bobtfish::Aws_api` explained
+
+(If you are not making changes or adding to the `aws_api` ruby code, it is enitrely safe to ignore this section).
+
+All AWS resource providers share a common base class that provides much of the heavy lifitng and dealing with the various pecularities of exposing the AWS API as a puppet resource. This includes (among other things):
+
+- Knowing which region's API endpoint to query and avoiding API calls to regions far-off regions not present in our manifests.
+- Dealing with the fact that most AWS API operations are not synchronous - manifest changes have to know how and when to wait and ensure AWS resources are actually "ready" before attempting to continue setting up dependent resources.
+- Efficiently handling state changes of arbitrary subsets of properties which can span over several different APIs for the same resource.
+- Making it easier to work with AWS' interconnected graph of dependent or  related resources.
+
+In impelmentation terms, this broadly speaking boils down to:
+
+- Assigning each resource to a particular AWS API (see `primary_api`)
+- Making sure each resource knows what region it's in and how to collect instances of itself for that region (see `find_region_from` and `aws_items_for_region`)
+- Making puppet aware of all possible resource states and transitional states (see `ensure_from_state`).
+- Using a slightly modified version of the `flush` pattern to apply state changes in bulk as efficiently as possible (see `flushing_resource_methods`, `flush_when_ready` and the `flushing` helper).
+
+The `Aws_ec2_instance` provider implementation illustrates all the above concepts and is a good starting point for new resources. 
+
+Please consult `aws_api.rb` for further details.
+
