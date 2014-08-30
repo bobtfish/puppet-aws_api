@@ -11,9 +11,9 @@ module Puppetx
         super
       end
 
-      def preventable_flush
+      def flush_when_ready
         super
-        flushing? :tags do |tags|
+        flushing :tags do |tags|
           aws_item.clear_tags
           tags.each do |key, value|
             aws_item.tags[key] = value
@@ -21,6 +21,16 @@ module Puppetx
         end
         aws_item.tags['Name'] = resource[:name]
       end
+
+      # Some identifier to use if tag lookup fails
+      def fallback_name
+        if aws_item.respond_to? :id
+          aws_item.id
+        else
+          raise NotImplementedError
+        end
+      end
+
     end
   end
 end
@@ -34,6 +44,8 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
 
   # For subclasses to implement:
 
+  # Return AWS item instances for given region.
+  # Can use `primary_api :collection` configuration if provided.
   def self.aws_items_for_region(region)
     if @collection
       api(region).send(@collection.to_sym)
@@ -42,8 +54,45 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     end
   end
 
+  # Return region name given resource type instance.
+  # Can be implemented by `find_region_from`.
   def self.find_region(type)
     raise NotImplementedError
+  end
+
+  # Return an ensure state to for the given `aws_item`.
+  # Can be implemented by `ensure_form_state`.
+  def self.get_ensure_state(aws_item)
+    raise NotImplementedError, "Um #{name} - #{aws_item}"
+  end
+
+  # Wait for any state transitions in AWS to finish applying.
+  # Can be implemented by `ensure_form_state`.
+  def wait_for_state_transitions
+    # don't wait for anything unless told otherwise
+  end
+
+
+  # Called after aws_item and region have already been populated.
+  # See  `init` and `map_init` for some helpful implementation sugar.
+  def init_property_hash
+    # make super()-safe so we can make liberal use of mixins
+  end
+
+  # Called after `wait_for_state_transitions`, works the same as the standard
+  # puppet flush.
+  # Best to implement using the `flushing` helper.
+  def flush_when_ready
+    # make super()-safe so we can make liberal use of mixins
+  end
+
+
+
+  # Shared core functionality:
+
+  def initialize(*args)
+    super(*args)
+    @property_flush = {}
   end
 
   def self.instance_from_aws_item(region, aws_item)
@@ -53,62 +102,6 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     instance
   end
 
-  def get_ensure_state(aws_item)
-    raise NotImplementedError
-  end
-
-  def destroy
-    if aws_item.respond_to? :delete
-      self.prevent_flush!
-      aws_item.delete
-      self.ensure = :absent
-    else
-      raise NotImplementedError
-    end
-  end
-
-  def fallback_name
-    if aws_item.respond_to? :id
-      aws_item.id
-    else
-      raise NotImplementedError
-    end
-  end
-
-
-  def initialize(*args)
-    super(*args)
-    @property_flush = {}
-    @prevent_flush = false
-  end
-
-  # Called after aws_item and region have already been populated
-  def init_property_hash
-    # just so super is always safe
-  end
-
-  # Called during flush unless `prevent_flush!` was used
-  def preventable_flush
-  end
-
-  # Don't run the preventable_flush during the next flush cycle
-  def prevent_flush!
-    @prevent_flush = true
-  end
-
-  # Are any of the given properties being flushed?
-  # If given a block, will execute that block conditionally, passing in the
-  # the flush values
-  def flushing?(*properties)
-    properties.collect!(&:to_sym)
-    did_flush = (@property_flush.keys & properties).any?
-    if block_given? and did_flush
-      yield *properties.collect {|p| @property_flush[p]}
-    end
-    did_flush
-  end
-
-  # Shared core functionality:
 
 
   def self.instances
@@ -145,33 +138,34 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     end
   end
 
+  # Delegate to flush_when_ready to handle wonky AWS states
+  def flush
+    self.wait_for_state_transitions
+    self.flush_when_ready
+    @property_flush = {}
+  end
+
+  # We rely on flush, but make sure we still set ensure with the default ensurable behaviour
+  def create
+    self.ensure = :present
+  end
+  def destroy
+    self.ensure = :absent
+  end
+
   def exists?
     self.ensure == :present
   end
 
-  def flush
-    unless @prevent_flush
-      preventable_flush
-    end
-    @prevent_flush = false
-  end
-
-  # Used by wait_until_ready
-  def ready?
-    self.ensure == :present
-  end
-
-  def wait_until_ready(timeout=60, cycle=1)
-    wait_until(timeout, cycle, &method(:ready?))
-  end
 
   # Wait until arbitrary block becomes true
-  def wait_until(timeout=60, cycle=1, &block)
+  def wait_until(timeout=60, cycle=1, fatigue=1.2, &block)
     waited = 0
     until waited > timeout or block.call
-      debug "Waiting for resource..."
+      debug "#{self} is waiting for resource (%5.2f/%2ds +%5.2f)..."% [waited, timeout, cycle]
       sleep cycle
       waited += cycle
+      cycle *= fatigue
     end
   end
 
@@ -179,27 +173,12 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     @property_hash[:aws_item]
   end
 
-  def create
-    self.ensure = :present
-  end
 
-  # Are we currently flushing to a create state?
-  # If given a block, it will be called condtionally and the returned value will be used to
-  # assign the new aws_item. Will also wait until resource is ready after block is ran.
-  def creating?
-    is_creating = (@property_flush[:ensure] == :present)
-    if block_given? and is_creating
-      @property_hash[:aws_item] = yield
-      wait_until_ready
-    end
-    is_creating
-  end
-
-  # Some convenience:
+  # Init helpers:
 
 
   # Init @property_hash based on properties of aws_item. Array arguments use the same
-  # property name on oth sides, the Hash argument maps a  puppet resource property name
+  # property name on both sides, while the Hash argument maps a puppet resource property name
   # to a aws_item property name
   def map_init(*properties)
     mapped_properties = {}
@@ -208,7 +187,12 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     end
 
     properties.each do |prop|
-      @property_hash[prop] = aws_item.send(prop)
+      @property_hash[prop] = if aws_item.is_a? Hash
+        # sometimes we use the "raw" API and only have hash responses to work with
+        aws_item[prop]
+      else
+        aws_item.send(prop)
+      end
     end
 
     mapped_properties.each do |puppet_prop, aws_prop|
@@ -219,6 +203,46 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
   # Convenience setter for (the somewhat verbosely) @property_hash
   def init(prop, value)
     @property_hash[prop] = value
+  end
+
+  # Flush helpers:
+
+  # Executes the given block if any of the given names of `properties` have pending changes
+  # to flush. The block will be executed with the requested values of each given property as
+  # arguments (in the same order as the `properties` names).
+  #
+  # If the last  hash argument is a hash, its keys correspond to property names as above, but
+  # the block will only be executed when the property's flush value matches the given value.
+  # These values are *not* added to the block's argument list.
+  #
+  # Flushing `:ensure` triggers some additional special behaviour:  After the block is executed
+  # state transitions are allowed to finalized using  `get_ensure_state` and
+  # `wait_for_state_transitions`. When using `:ensure => :present` specifically, the block's
+  # return value is used to populate `aws_item` if not already present.
+  def flushing(*properties, &block)
+    match_values = {}
+    match_values = properties.pop if properties.last.is_a? Hash
+
+    # IF BOTH:
+    #   1) EITHER there are no properties to match -OR-, if there are
+    #      they should have at least one item in common with the actual @property_flush set
+    #   2) all hash property matches matches the actual flush value
+    if ((
+            properties.empty? || (@property_flush.keys & properties).any?
+      ) &&  match_values.all? {|p, v| @property_flush[p] == v })
+      return_value = block.call(*properties.collect {|p| @property_flush[p]})
+
+      if match_values[:ensure]
+        goal = match_values[:ensure]
+        if goal == :present and aws_item.nil?
+          @property_hash[:aws_item] = return_value
+        end
+        wait_until do
+          self.class.get_ensure_state(aws_item) == goal
+        end
+        self.wait_for_state_transitions
+      end
+    end
   end
 
   # Lookup system
@@ -274,7 +298,11 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
           @property_hash[attr]
         end
       end
-      unless read_only.include?(attr)
+      if read_only.include?(attr)
+        define_method(attr.to_s + "=") do |val|
+          fail "Can't change #{attr} property for #{self} - it is read-only once #{resource.type} resource is created."
+        end
+      else
         define_method(attr.to_s + "=") do |val|
           @property_hash[attr] = val
           @property_flush[attr] = val
@@ -316,23 +344,72 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
 
   end
 
-  # Configure how to map the aws resource state to an ensure value
-  # Note: For best results with wait_until_ready, allow transitional states
-  # to pass through as-is (i.e. don't map :pending => :present)
-  def self.ensure_from_state(state_method, state_mapping={})
+  # Configure how to map the AWS resource state to an ensure value.
+  #
+  # A block must be provided that takes a given `aws_item` and returns its state. (Note that
+  # Symbol#to_proc will usually suffice for this purpose.)
+  #
+  # `state_mapping` is the hash mapping from possible state values (strings will always be
+  # symbolized) to either a) the value to use for ensure (e.g. `:available => :present`), or
+  # b) another state,  which indicate this is a transitional states (e.g.
+  # `:pending => :available`).
+  #
+  # Encountering an unmapped state value will raise an exception.
+  #
+  # If the `aws_item` has a method called `exists?` it will always be called before the
+  # `state_mapping` is applied and immediately resolve to `:absent` if false.
+  def self.ensure_from_state(state_mapping, &block)
+
+    get_terminus_state = lambda do |state|
+      target = state_mapping[state]
+      if state_mapping[target].nil? || state == target
+        # If the target state is not also a key OR it is a key, but it simply points to itself
+        # this must be the terminal state
+        return target
+      else
+        # not a terminal state, keep looking
+        return get_terminus_state.call(target)
+      end
+    end
+    terminus_states = {}
+    transitional_states = {}
+    state_mapping.each do |k, v|
+      term = get_terminus_state.call(k)
+      terminus_states[k] = term
+      if v != term
+        transitional_states[k] = v
+      end
+    end
+
     define_singleton_method :get_ensure_state do |aws_item|
+
       # First, check if existance check is available, and failed:
       if aws_item.respond_to?(:exists?) and not aws_item.exists?
         :absent
-      # If we have no better state method than `exists?` (and it didn't
-      # already fail), we're done
-      elsif state_method == :exists?
-        :present
       # For everything else, apply the `state_mapping` (or fall back to
       # the raw state string)
       else
-        state = aws_item.send(state_method).to_sym
-        state_mapping[state] or state
+        state = block.call(aws_item)
+        state = state.to_sym if state.respond_to? :to_sym
+        terminus = terminus_states[state]
+        if terminus.nil?
+          raise "Unknown ensure state for #{aws_item}: #{state}"
+        end
+        terminus
+      end
+    end
+
+    if transitional_states.any?
+      define_method :wait_for_state_transitions do
+        if aws_item
+          wait_until do
+            state = block.call(aws_item)
+            state = state.to_sym if state.respond_to? :to_sym
+            # wait until state is no longer transitional
+            !transitional_states[state]
+          end
+
+        end
       end
     end
   end
