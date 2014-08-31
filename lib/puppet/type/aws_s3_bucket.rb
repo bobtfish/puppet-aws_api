@@ -3,10 +3,7 @@ Puppet::Type.newtype(:aws_s3_bucket) do
   newparam(:name)
   ensurable do
     self.defaultvalues
-    newvalue(:purged) do
-      # Recursively purge
-      @resource.provider.purge
-    end
+    newvalue :purged
   end
   newproperty(:region)
 end

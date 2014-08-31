@@ -112,7 +112,12 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     end.flatten
   end
 
+  @@prefetched = {}
   def self.prefetch(resources)
+    if @@prefetched[self]
+      debug "AWS_API: Skipping redundant prefetch..."
+      return
+    end
     resources.values.map {|type|
       type.class.defaultprovider.find_region(type)
     }.uniq.each do |region|
@@ -124,6 +129,7 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
         end
       end
     end
+    @@prefetched[self] = true
   end
 
   def self.regions
@@ -271,8 +277,7 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     unless found
       # Perhaps the referenced type was not yet prefetched?
       debug "AWS_API: Catalog lookup triggered prefetch for #{type_name}"
-      type = Puppet::Type.type(type_name)
-      type.defaultprovider.prefetch(self.resources_by_provider(catalog, type_name))
+      self.induce_prefetch(catalog, type_name)
     end
     found = catalog.resource("#{type_name.capitalize}[#{resource_name}]")
     if found
@@ -282,12 +287,17 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     end
   end
 
+  def self.induce_prefetch(catalog, type_name)
+     type = Puppet::Type.type(type_name)
+     type.defaultprovider.prefetch(self.resources_by_provider(catalog, type_name))
+  end
+
   # Dynamic helpers
 
   # Based on mk_resource_methods, but handles @property_flush behaviour and
   # can implement certain properties as read_only
-  def self.flushing_resource_methods(opts)
-    read_only = opts[:read_only].collect(&:to_sym)
+  def self.flushing_resource_methods(opts={})
+    read_only = (opts[:read_only] or []).collect(&:to_sym)
     [resource_type.validproperties, resource_type.parameters].flatten.each do |attr|
       attr = attr.intern
       next if attr == :name
@@ -319,6 +329,11 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
       # this resources explicitly lacks a region
       define_singleton_method :find_region do |type|
         nil
+      end
+      # We should also avoid iterating over regions for this
+      # provider:
+      define_singleton_method :regions do
+        [nil]
       end
     elsif property_name.nil?
       # region is directly available!

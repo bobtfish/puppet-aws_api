@@ -3,7 +3,10 @@ require 'puppetx/bobtfish/type_helpers'
 Puppet::Type.newtype(:aws_ec2_instance) do
   @doc = "Manage AWS EC2 instances"
   newparam(:name)
-  ensurable
+  ensurable do
+    self.defaultvalues
+    # newvalue :stopped
+  end
 
   newproperty(:image_id) do
     include Puppetx::Bobtfish::RequiredValue

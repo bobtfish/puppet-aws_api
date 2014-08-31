@@ -22,13 +22,11 @@ Puppet::Type.type(:aws_rrset).provide(:api, :parent => Puppetx::Bobtfish::Aws_ap
     super
     map_init(
       :ttl,
-      :zone => :hosted_zone_id
     )
+    init :zone, r53.hosted_zones[aws_item.hosted_zone_id].name
     init :name, "#{record_type} #{record_name}"
     init :value, aws_item.resource_records.collect {|r| r[:value]} # match targets?
   end
-
-
 
   def record_type
     aws_item.type
@@ -39,77 +37,62 @@ Puppet::Type.type(:aws_rrset).provide(:api, :parent => Puppetx::Bobtfish::Aws_ap
   end
 
   def flush_when_ready
-    flushing :ensure => :absend do
+    flushing :ensure => :absent do
       aws_item.delete
       return
     end
 
     flushing :ensure => :present do
-      zone = lookup(:aws_hosted_zone, resource[:zone])
+      zone = lookup(:aws_hosted_zone, resource[:zone]).aws_item
+      # These get flushed with the call to create:
+      @property_flush.delete(:ttl)
+      @property_flush.delete(:value)
+
+      # Now create
       zone.rrsets.create(
-        record_name,
-        record_type,
+        resource.record_name,
+        resource.record_type,
         :ttl => resource[:ttl].to_i,
-        :resource_records => get_resource_records,
+        :resource_records => self.subbed_record_values,
       )
     end
 
+    flushing :value do |value|
+      aws_item.resource_records = self.subbed_record_values
+      aws_item.update()
+    end
+
+    flushing :ttl do |ttl|
+      aws_item.ttl = ttl
+      aws_item.update()
+    end
   end
-
-
-  def create
-    zone = self.class.find_hosted_zone_by_name(resource[:zone])
-    zone.rrsets.create(
-      record_name,
-      record_type,
-      :ttl => resource[:ttl].to_i,
-      :resource_records => get_resource_records,
-    )
-  end
-
-  def destroy
-    @property_hash[:aws_item].delete
-  end
-
-  private
-
   def split_name
     @split_name ||= @property_hash[:name].split(' ')
   end
 
-  def get_resource_records
-    records = resource[:value].map{|v| {:value => v}}
-    if resource[:ec2_instance]
-      unless %w(CNAME A).include?(record_type)
-        raise "ec2_instance option is for CNAME or A record types only"
-      end
-      if resource[:value].any? or resource[:load_balancer]
-        raise "ec2_instance option can't be used at the same time as value or load_balancer"
-      end
-      instance = lookup(:aws_ec2_instance, resource[:ec2_instance])
-      unless instance.elastic_ip and instance.elastic_ip.public_ip
-        raise "ec2_instance reference must have a public Elastic IP"
-      end
-      records = [{:value => instance.elastic_ip.public_ip}]
-    elsif resource[:load_balancer]
-      unless %w(CNAME).include?(record_type)
-        raise "load_balancer option is for CNAME record types only"
-      end
-      if resource[:value].any? or resource[:ec2_instance]
-        raise "load_balancer option can't be used at the same time as value or ec2_instance"
-      end
-
-      records = [{:value => lookup(:aws_elb, resource[:load_balancer]).dns_name}]
+  def subbed_record_values
+    targets = resource[:targets]
+    targets = [targets]  unless targets.is_a? Array
+    record_values = resource[:value]
+    record_values = [record_values]  unless targets.is_a? Array
+    if targets.nil? or targets.empty?
+      # nothing to fill with, we're not doing substitutions
+      return record_values
     end
-    return records
+    record_values.each_with_index.map do |record, i|
+      target = targets[i]
+      type_name = target.type.downcase.to_sym
+      provider = lookup(type_name, target.title)
+      provider.class.induce_prefetch(resource.catalog, type_name)
+
+      provider = lookup(type_name, target.title)
+
+      {:value => record % provider.substitutions}
+    end
+
   end
 
-  def wait_until_ready(zone)
-    until zone.change_info.status == 'PENDING'
-      puts "Zone status is: #{zone.change_info.status}"
-      sleep 1
-    end
-  end
 
 end
 

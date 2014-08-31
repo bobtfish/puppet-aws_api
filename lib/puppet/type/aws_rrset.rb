@@ -32,9 +32,11 @@ Puppet::Type.newtype(:aws_rrset) do
     defaultto []
     desc "The record value string (array of strings for multiple lines)"
     # TODO: validation, document placeholders
-    def unsafe_munge(value)
-      self.resource.fill_targets(value)
-    end
+    # def unsafe_munge(value)
+    #   munged = self.resource.fill_targets(value, resource[:targets])
+    #   puts "RRSET MUNGE VALUE #{value} -> #{munged}"
+    #   munged
+    # end
   end
 
   VALID_TARGET_TYPES = [
@@ -55,6 +57,8 @@ Puppet::Type.newtype(:aws_rrset) do
     defaultto []
     desc "An array of other AWS resources which will be used to fill out  placeholders in their corresponding value lines."
     validate do |value|
+      value = [value]  unless value.is_a? Array
+      puts "HELLO TARGETS? #{value}"
       if !value.nil? and value.any? and value.size != resource[:value].size
         raise ArgumentError, "You most provide a target for each RRSET value! (You have #{resource[:value].size} record value(s) but #{value.size} target(s)...)"
       end
@@ -67,6 +71,7 @@ Puppet::Type.newtype(:aws_rrset) do
         end
       end
     end
+
   end
 
   newproperty(:ttl) do
@@ -74,17 +79,7 @@ Puppet::Type.newtype(:aws_rrset) do
       include Puppetx::Bobtfish::EnsureIntValue
   end
 
-  def fill_targets(record_values)
-    targets = self[:targets]
-    if targets.nil? or targets.empty?
-      # nothing to fill with, we're not doing substitutions
-      return record_values
-    end
-    record_values.each_with_index.map do |i, record|
-      record % targets[i].provider.substitutions
-    end
 
-  end
 
   private
 

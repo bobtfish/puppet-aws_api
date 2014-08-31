@@ -2,13 +2,15 @@ Puppet::Type.newtype(:aws_hosted_zone) do
   @doc = "Manage AWS Route 53 hosted zone"
   newparam(:name) do
     desc "Domain name"
+    validate do |value|
+      unless value.end_with? '.'
+        raise ArgumentError, "Hosted zone name must terminate with a dot - e.g. 'example.com.', not 'example.com' "
+      end
+    end
   end
   ensurable do
-  	self.defaultvalues
-    newvalue(:purged) do
-      # removes any rrsets contained
-      @resource.provider.purge 
-    end
+    self.defaultvalues
+    newvalue :purged
   end
 end
 

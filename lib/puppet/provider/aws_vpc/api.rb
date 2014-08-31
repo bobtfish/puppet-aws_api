@@ -116,15 +116,23 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
       igw.delete
     end
 
-    # Just give everything a little bit of time to settle so we don't get depdendency
-    # violations - experience has shown this to be simpler and more reliable than
-    # explicit checks.
-    sleep 2
-
     # Subnets
-    subnets.each do |sn|
-      debug "Disposing of subnet: #{sn.tags['Name']}"
-      sn.delete
+    # Things get a bit wierd here with dependencies and waiting,
+    # so just keep trying - it should work in a few seconds
+    wait_until do
+      begin
+        subnets.each do |sn|
+          debug "Disposing of subnet: #{sn.tags['Name']}"
+          sn.delete
+        end
+      rescue Exception => e
+        if e.message =~ 'has dependencies and cannot be deleted'
+          puts "Waiting for subnet to clear..."
+        else
+          raise
+        end
+      end
+      subnets.all?{|sn| !sn.exists?}
     end
 
     # Finally, the VPC itself

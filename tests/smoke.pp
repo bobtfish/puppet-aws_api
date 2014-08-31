@@ -39,24 +39,25 @@ if $ensure != 'purged' {
     instance_type => 't2.micro',
     subnet => 'main',
     key_name => 'puppet-test',
-    user_data => "secret=blahblhburgertown"
+    user_data => "secret=blahblhburgertown",
+    associate_public_ip_address => true,
   }
 
-  aws_rrset {"SRV _sip._tcp.example.com.":
+  aws_hosted_zone{ 'test2.com.':
+
+  }
+
+  aws_rrset {"SRV _sip._tcp.test2.com.":
     ttl => 123,
-    zone => 'example.com.',
+    zone => 'test2.com.',
     value => [
-      '1 10 %{port} %{cname}',
       '1 10 80 %{public_ip} '
     ],
     targets => [
-      Aws_ec2_instance['node'],
       Aws_ec2_instance['node']
     ]
   }
 
-  # aws_hosted_zone{ 'example.com.':
 
-  # }
 
 }

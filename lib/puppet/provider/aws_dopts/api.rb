@@ -41,7 +41,8 @@ Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppetx::Bobtfish::Aws_ap
         :domain_name_servers  => resource[:domain_name_servers],
       }
       [:ntp_servers, :netbios_name_servers, :netbios_node_type].each do |opt|
-        config[opt] = resource[opt] unless resource[opt].nil? or resource[opt].empty?
+        cfg_value = resource[opt]
+        config[opt] = cfg_value unless cfg_value.nil? or (cfg_value.is_a?(Array) and cfg_value.empty?)
       end
       collection.create(config)
     end
