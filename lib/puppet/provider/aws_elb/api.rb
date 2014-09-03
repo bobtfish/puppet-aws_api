@@ -114,6 +114,7 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
   def substitutions
     {
       :cname => aws_item.dns_name,
+      :port => aws_item.listeners.first.port,
     }
   end
 
