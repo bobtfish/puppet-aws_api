@@ -40,14 +40,17 @@ Puppet::Type.type(:aws_rds_instance).provide(:api, :parent => Puppetx::Bobtfish:
       init :endpoint, "#{aws_item.endpoint_address}:#{aws_item.endpoint_port}"
     end
 
-    if aws_item.vpc_security_groups
-      init :security_groups, aws_item.vpc_security_groups.collect{ |sg|
-        "#{aws_item.vpc.tags['Name']}:#{sg.name}"
+    vpc = aws_item.vpc
+
+    if raw_aws_item[:vpc_security_groups]
+      init :security_groups, raw_aws_item[:vpc_security_groups].collect{ |sg|
+        "#{vpc.tags['Name'] || vpc.vpc_id}:#{vpc.security_groups[sg[:vpc_security_group_id]].name}"
       }
     end
-    if aws_item.db_subnet_group
-      init :subnets, aws_item.db_subnet_group.subnets.collect{ |sn|
-        sn.tags['Name']
+
+    if raw_aws_item[:db_subnet_group]
+      init :subnets, raw_aws_item[:db_subnet_group][:subnets].collect{ |sn|
+        vpc.subnets[sn[:subnet_identifier]].tags['Name']
       }
     end
 
@@ -105,6 +108,12 @@ Puppet::Type.type(:aws_rds_instance).provide(:api, :parent => Puppetx::Bobtfish:
       :cname => aws_item.endpoint_address,
       :port => aws_item.endpoint_port,
     }
+  end
+
+  private
+
+  def raw_aws_item
+    @raw_aws_item ||= aws_item.send(:get_resource)[:db_instances][0]
   end
 end
 
