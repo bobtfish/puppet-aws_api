@@ -117,6 +117,32 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
       igw.delete
     end
 
+    # Murder RDS:
+    dbis = []
+    rds.db_instances.each do |dbi|
+      if dbi.vpc_id == vpc.vpc_id
+        debug "Deleting RDS instance: #{dbi.db_name}"
+        dbis << dbi
+        unless dbi.status == 'deleting'
+          dbi.delete(:final_db_snapshot_identifier => "#{dbi.db_name}-final")
+        end
+      end
+    end
+
+    # wait_until do
+    #   dbis.all? do |dbi|
+    #     debug "Awaiting termination for RDS instance #{dbi.db_name}..."
+    #     !dbi.exists? or dbi.db_instance_status == 'deleted'
+    #   end
+    # end
+
+    rds.client.describe_db_subnet_groups()[:db_subnet_groups].each do |sng|
+      if sng[:vpc_id] == vpc.vpc_id
+        debug "Clearing subnets from RDS SNG #{sng[:db_subnet_group_name]}..."
+        rds.client.delete_db_subnet_group(:db_subnet_group_name => sng[:db_subnet_group_name])
+      end
+    end
+
     # Subnets
     # Things get a bit wierd here with dependencies and waiting,
     # so just keep trying - it should work in a few seconds

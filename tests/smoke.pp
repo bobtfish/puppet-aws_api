@@ -1,7 +1,7 @@
 # some very lazy smoke tests
 
-$ensure = present
-# $ensure = purged
+# $ensure = present
+$ensure = purged
 
 
 aws_vpc { 'test':
@@ -30,10 +30,9 @@ if $ensure != 'purged' {
     region => 'us-west-2',
   }
 
-
   aws_subnet {'main':
      vpc => 'test',
-     cidr => '10.0.1.0/24'
+     cidr => '10.0.1.0/24',
   }
 
   aws_subnet {'alt':
@@ -41,6 +40,18 @@ if $ensure != 'purged' {
      cidr => '10.0.2.0/24',
      unique_az_in_vpc => true,
   }
+
+  aws_rds_instance {"rdsdb":
+    allocated_storage => 5,
+    db_instance_class => 'db.t2.micro',
+    master_username => 'test',
+    master_user_password => 'password1234',
+    subnets => ['main', 'alt'],
+    security_groups => ['test:default'],
+  }
+
+
+
 
   aws_iam_role {'test':
     service_principal => 'ec2.amazonaws.com',
@@ -72,14 +83,6 @@ if $ensure != 'purged' {
     associate_public_ip_address => true,
   }
 
-
-  aws_rds_instance {"rdsdb":
-    allocated_storage => 5,
-    db_instance_class => 'db.t2.micro',
-    master_username => 'test',
-    master_user_password => 'password1234',
-    subnets => ['main', 'alt'],
-  }
 
   aws_rrset {"SRV _test._tcp.test2.com.":
     ttl => 123,

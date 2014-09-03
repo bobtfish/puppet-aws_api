@@ -24,6 +24,8 @@ Puppet::Type.type(:aws_rds_instance).provide(:api, :parent => Puppetx::Bobtfish:
     &:db_instance_status
   )
 
+  @@default_timeout = 600
+
   def init_property_hash
     super
     map_init(
@@ -59,7 +61,10 @@ Puppet::Type.type(:aws_rds_instance).provide(:api, :parent => Puppetx::Bobtfish:
   def flush_when_ready
     flushing :ensure => :absent do
       rds.client.delete_db_subnet_group(:db_subnet_group_name => resource[:name])
-      rds.client.delete_db_instance(:db_instance_identifier => resource[:name])
+      rds.client.delete_db_instance(
+        :db_instance_identifier => resource[:name],
+        :final_db_snapshot_identifier => "#{resource[:name]}-final",
+      )
       return
     end
 
