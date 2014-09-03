@@ -31,9 +31,10 @@ Puppet::Type.newtype(:aws_rrset) do
   newproperty(:value, :array_matching => :all) do
     defaultto []
     desc "The record value string (array of strings for multiple lines)"
+    include Puppetx::Bobtfish::SortedDeepCompare
     # TODO: validation, document placeholders
     def insync?(is)
-      subbed_should == is
+      deep_sort(subbed_should) == deep_sort(is)
     end
     def subbed_should
       self.resource.provider.subbed_record_values

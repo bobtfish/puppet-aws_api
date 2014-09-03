@@ -58,8 +58,6 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
       health = (health || {}).merge(@property_hash[:health_check] || {})
       # same idea with target (in case only one flushes)
       target ||= @property_hash[:target]
-      puts "TARGET: #{target.inspect}"
-      puts "HEALTH: #{health.inspect}"
       aws_item.configure_health_check(
         :healthy_threshold => health['healthy_threshold'].to_i,
         :unhealthy_threshold => health['unhealthy_threshold'].to_i,
@@ -113,7 +111,7 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
 
   def substitutions
     {
-      :cname => aws_item.dns_name,
+      :cname => aws_item.canonical_hosted_zone_name,
       :port => aws_item.listeners.first.port,
     }
   end

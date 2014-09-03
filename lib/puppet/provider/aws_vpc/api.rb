@@ -143,6 +143,9 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
       end
     end
 
+    # Murder ELCC
+    # TODO: get murderin'
+
     # Subnets
     # Things get a bit wierd here with dependencies and waiting,
     # so just keep trying - it should work in a few seconds

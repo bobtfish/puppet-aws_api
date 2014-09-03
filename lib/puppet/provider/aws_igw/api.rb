@@ -40,6 +40,8 @@ Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
         :internet_gateway => aws_item
       )
     end
+
+    super
   end
 end
 

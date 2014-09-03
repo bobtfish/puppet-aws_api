@@ -90,7 +90,6 @@ Puppet::Type.type(:aws_rrset).provide(:api, :parent => Puppetx::Bobtfish::Aws_ap
       provider.class.induce_prefetch(resource.catalog, type_name)
 
       provider = lookup(type_name, target.title)
-
       record % provider.substitutions
     end
 

@@ -58,7 +58,7 @@ module Puppetx
 
     module EnsureIntValue
       def unsafe_validate(value)
-        unless value =~ /^\d+$/
+        unless value.is_a?(Integer) or value =~ /^\d+$/
           raise ArgumentError, "#{resource} #{name} must be a valid integer, got: #{value.inspect}"
         end
       end

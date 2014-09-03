@@ -117,7 +117,7 @@ if $ensure != 'purged' {
       Aws_ec2_instance['node'],
       Aws_rds_instance['rdsdb'],
       Aws_cache_cluster['redis'],
-      Aws_elb['main'],
+      Aws_elb['test-elb'],
     ]
   }
 

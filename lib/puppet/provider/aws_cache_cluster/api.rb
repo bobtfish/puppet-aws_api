@@ -16,9 +16,7 @@ Puppet::Type.type(:aws_cache_cluster).provide(:api, :parent => Puppetx::Bobtfish
     :available => :present,
     :creating => :available,
   ) do |aws_item|
-    state = aws_refresh(aws_item)[:cache_cluster_status]
-    puts "state -> #{state.inspect}"
-    state
+    aws_refresh(aws_item)[:cache_cluster_status]
   end
 
   def self.aws_items_for_region(region)
