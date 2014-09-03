@@ -3,7 +3,19 @@ require 'puppetx/bobtfish/type_helpers'
 Puppet::Type.newtype(:aws_cache_cluster) do
   @doc = "Manage an AWS ElastiCache cache cluster"
   # TODO much validations
-  newparam(:name)
+  newparam(:name) do
+    validate do |value|
+      unless value =~ /^[-a-z0-9]{1,20}$/i
+        raise ArgumentError, "Cache cluster name must contain from 1 to 20 alphanumeric characters or hyphens."
+      end
+      unless value =~ /^[a-z]/i
+        raise ArgumentError, "Cache cluster name first character must be a letter."
+      end
+      if value =~ /-$/ || value =~ /--/
+        raise ArgumentError, "Cache cluster name cannot end with a hyphen or contain two consecutive hyphens."
+      end
+    end
+  end
   ensurable
   newproperty(:cache_node_type)
   newproperty(:engine) do

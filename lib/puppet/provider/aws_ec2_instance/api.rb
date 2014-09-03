@@ -62,6 +62,8 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppetx::Bobtfish:
 
   end
 
+  @@default_timeout = 300 # ec2 instances can be a bit slow to start at times
+
   def flush_when_ready
     flushing :ensure => :absent do
       eip = aws_item.elastic_ip
@@ -133,13 +135,15 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppetx::Bobtfish:
         end
       end
 
+      also_flush(:security_groups, :elastic_ip)
+
       instance # this becomes aws_item
     end
 
-    flushing :aws_security_groups do |sgs|
+    flushing :security_groups do |sgs|
       aws_item.client.modify_instance_attribute(
         :instance_id => aws_item.id,
-        :security_groups => sgs.collect {|sg| lookup(:aws_security_group, sg).aws_item }
+        :groups => sgs.collect {|sg| lookup(:aws_security_group, sg).aws_item.id }
       )
     end
 

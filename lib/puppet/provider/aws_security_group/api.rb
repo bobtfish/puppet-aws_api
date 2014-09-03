@@ -7,7 +7,7 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppetx::Bobtfis
     :description, :vpc, :authorize_ingress, :authorize_egress]
 
   def self.find_region(type)
-    vpc = catalog_lookup(type.catalog, :aws_vpc, type.vpc_name).aws_item
+    vpc = catalog_lookup(type.catalog, :aws_vpc, type.vpc_name)
     vpc.class.find_region(vpc.resource)
   end
 
@@ -22,7 +22,11 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppetx::Bobtfis
   def init_property_hash
     super
     map_init(:description)
-    init :vpc, aws_item.vpc.tags['Name']
+    if aws_item.vpc?
+      vpc_name = aws_item.vpc.tags['Name'] || aws_item.vpc_id
+      init :vpc, vpc_name
+      init :name, "#{vpc_name}:#{aws_item.name}"
+    end
     init :authorize_ingress, unmunge_rules(aws_item.ingress_ip_permissions)
     init :authorize_egress, unmunge_rules(aws_item.egress_ip_permissions)
   end
@@ -33,7 +37,8 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppetx::Bobtfis
       return
     end
 
-    flushing :ensure => :create do
+    flushing :ensure => :present do
+      also_flush :authorize_ingress, :authorize_egress
       collection.create(resource[:name],
         :description => resource[:description],
         :vpc => lookup(:aws_vpc, resource[:vpc]).aws_item

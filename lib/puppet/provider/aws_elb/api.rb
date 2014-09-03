@@ -42,7 +42,9 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
       return
     end
 
-    flushing :ensure => :create do
+    flushing :ensure => :present do
+      also_flush(:health_check, :instances)
+
       elb.collection.create(resource[:name],
         :listeners => resource[:listeners].map{ |l| {
           :load_balancer_port => l['port'].to_i,

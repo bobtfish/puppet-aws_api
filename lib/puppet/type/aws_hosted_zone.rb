@@ -1,3 +1,4 @@
+require 'puppetx/bobtfish/type_helpers'
 Puppet::Type.newtype(:aws_hosted_zone) do
   @doc = "Manage AWS Route 53 hosted zone"
   newparam(:name) do
@@ -9,8 +10,7 @@ Puppet::Type.newtype(:aws_hosted_zone) do
     end
   end
   ensurable do
-    self.defaultvalues
-    newvalue :purged
+    include Puppetx::Bobtfish::Purgable
   end
 end
 

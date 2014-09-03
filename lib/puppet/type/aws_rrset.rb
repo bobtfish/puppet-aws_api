@@ -32,11 +32,12 @@ Puppet::Type.newtype(:aws_rrset) do
     defaultto []
     desc "The record value string (array of strings for multiple lines)"
     # TODO: validation, document placeholders
-    # def unsafe_munge(value)
-    #   munged = self.resource.fill_targets(value, resource[:targets])
-    #   puts "RRSET MUNGE VALUE #{value} -> #{munged}"
-    #   munged
-    # end
+    def insync?(is)
+      subbed_should == is
+    end
+    def subbed_should
+      self.resource.provider.subbed_record_values
+    end
   end
 
   VALID_TARGET_TYPES = [
@@ -57,8 +58,11 @@ Puppet::Type.newtype(:aws_rrset) do
     defaultto []
     desc "An array of other AWS resources which will be used to fill out  placeholders in their corresponding value lines."
     validate do |value|
-      value = [value]  unless value.is_a? Array
-      puts "HELLO TARGETS? #{value}"
+      # When passed array values puppet always calls validate (and munge) separately for
+      # each array value.
+      # This cannot be turned off.
+      # And is RIDICULOUS.
+      value = @shouldorig if @shouldorig
       if !value.nil? and value.any? and value.size != resource[:value].size
         raise ArgumentError, "You most provide a target for each RRSET value! (You have #{resource[:value].size} record value(s) but #{value.size} target(s)...)"
       end
@@ -71,7 +75,6 @@ Puppet::Type.newtype(:aws_rrset) do
         end
       end
     end
-
   end
 
   newproperty(:ttl) do
@@ -84,7 +87,9 @@ Puppet::Type.newtype(:aws_rrset) do
   private
 
   def filter_targets(type_name)
-    self[:targets].find_all do |target|
+    targets = self[:targets]
+    targets = [targets]  unless targets.is_a? Array
+    targets.find_all do |target|
       target.type  == type_name
     end
   end

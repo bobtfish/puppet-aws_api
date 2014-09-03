@@ -44,21 +44,18 @@ Puppet::Type.type(:aws_rrset).provide(:api, :parent => Puppetx::Bobtfish::Aws_ap
 
     flushing :ensure => :present do
       zone = lookup(:aws_hosted_zone, resource[:zone]).aws_item
-      # These get flushed with the call to create:
-      @property_flush.delete(:ttl)
-      @property_flush.delete(:value)
 
       # Now create
       zone.rrsets.create(
         resource.record_name,
         resource.record_type,
         :ttl => resource[:ttl].to_i,
-        :resource_records => self.subbed_record_values,
+        :resource_records => self.subbed_record_values_for_aws,
       )
     end
 
     flushing :value do |value|
-      aws_item.resource_records = self.subbed_record_values
+      aws_item.resource_records = self.subbed_record_values_for_aws
       aws_item.update()
     end
 
@@ -69,6 +66,12 @@ Puppet::Type.type(:aws_rrset).provide(:api, :parent => Puppetx::Bobtfish::Aws_ap
   end
   def split_name
     @split_name ||= @property_hash[:name].split(' ')
+  end
+
+  def subbed_record_values_for_aws
+    subbed_record_values.collect do |record|
+      {:value => record}
+    end
   end
 
   def subbed_record_values
@@ -88,7 +91,7 @@ Puppet::Type.type(:aws_rrset).provide(:api, :parent => Puppetx::Bobtfish::Aws_ap
 
       provider = lookup(type_name, target.title)
 
-      {:value => record % provider.substitutions}
+      record % provider.substitutions
     end
 
   end

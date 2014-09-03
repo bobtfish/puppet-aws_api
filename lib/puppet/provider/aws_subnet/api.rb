@@ -27,12 +27,17 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppetx::Bobtfish::Aws_a
   end
 
   def flush_when_ready
+    flushing :ensure => :absent do
+      aws_item.delete
+      return
+    end
     flushing :ensure => :present do
-      vpc = lookup(:aws_vpc, resource[:vpc]).aws_item
+      vpc = lookup(:aws_vpc, resource[:vpc])
+      vpc_item = vpc.aws_item
 
       az = if resource[:unique_az_in_vpc]
         unused_azs = (
-          ec2.availability_zones.map(&:name) -  vpc.subnets.map(&:availability_zone_name)
+          ec2(vpc.region).availability_zones.map(&:name) -  vpc_item.subnets.map(&:availability_zone_name)
         )
         if unused_azs.empty?
           fail "No unused AZs left in VPC #{resource[:vpc]} for unique_az_in_vpc option..."
@@ -45,7 +50,7 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppetx::Bobtfish::Aws_a
 
       collection.create(resource[:cidr],
         :availability_zone => az,
-        :vpc => vpc
+        :vpc => vpc_item
       )
     end
     super

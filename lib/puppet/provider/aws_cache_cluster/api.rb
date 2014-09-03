@@ -80,7 +80,7 @@ Puppet::Type.type(:aws_cache_cluster).provide(:api, :parent => Puppetx::Bobtfish
       return
     end
 
-    flushing :ensure => :create do
+    flushing :ensure => :present do
       subnets = lookup(:aws_vpc, resource[:vpc]).subnets
 
       if subnets.none?
@@ -102,7 +102,7 @@ Puppet::Type.type(:aws_cache_cluster).provide(:api, :parent => Puppetx::Bobtfish
         :subnet_ids => subnets.map(&:id)
       )
 
-      @property_hash[:aws_item] = api.client.create_cache_cluster(
+      api.client.create_cache_cluster(
         :cache_cluster_id           => resource[:name],
         :num_cache_nodes            => 1, # only valid option for for redis
         :cache_node_type            => resource[:cache_node_type],
@@ -112,10 +112,6 @@ Puppet::Type.type(:aws_cache_cluster).provide(:api, :parent => Puppetx::Bobtfish
         :security_group_ids         => security_groups,
         :auto_minor_version_upgrade => resource[:auto_minor_version_upgrade],
       )
-      # We just flushed these:
-      @property_flush.delete(:security_groups)
-      @property_flush.delete(:engine_version)
-      @property_flush.delete(:auto_minor_version_upgrade)
     end
 
     flushing :security_groups, :engine_version, :auto_minor_version_upgrade do |sgs, ev, amvu|

@@ -1,6 +1,7 @@
 # some very lazy smoke tests
 
 $ensure = present
+# $ensure = purged
 
 
 aws_vpc { 'test':
@@ -8,6 +9,16 @@ aws_vpc { 'test':
   cidr => '10.0.0.0/16',
   dhcp_options => 'test',
   ensure => $ensure
+}
+
+aws_hosted_zone{ 'test2.com.':
+  ensure => $ensure
+
+}
+
+aws_s3_bucket{ "bobtfish-puppet-awsapi-testbucket":
+  region => 'us-west-2',
+  ensure => $ensure,
 }
 
 if $ensure != 'purged' {
@@ -25,7 +36,20 @@ if $ensure != 'purged' {
      cidr => '10.0.1.0/24'
   }
 
-  # aws_iam_role {'test':}
+  aws_subnet {'alt':
+     vpc => 'test',
+     cidr => '10.0.2.0/24',
+     unique_az_in_vpc => true,
+  }
+
+  aws_iam_role {'test':
+    service_principal => 'ec2.amazonaws.com',
+    permissions => [{
+      "Effect" => "Allow",
+      "Action" => ["s3:PutObject"],
+      "Resource" => "arn:aws:s3:::puppet_test_bucket/*"
+    }]
+  }
 
   $ubuntu14 = {
       'us-west-2' => 'ami-e7b8c0d7', # Oregon
@@ -34,29 +58,43 @@ if $ensure != 'purged' {
   }
   $ami = $ubuntu14['us-west-2']
 
+  aws_security_group {"test:default":
+  }
+
   aws_ec2_instance {"node":
     image_id => $ami,
     instance_type => 't2.micro',
     subnet => 'main',
+    iam_role => 'test',
+    security_groups => 'test:default',
     key_name => 'puppet-test',
     user_data => "secret=blahblhburgertown",
     associate_public_ip_address => true,
   }
 
-  aws_hosted_zone{ 'test2.com.':
 
+  aws_rds_instance {"rdsdb":
+    allocated_storage => 5,
+    db_instance_class => 'db.t2.micro',
+    master_username => 'test',
+    master_user_password => 'password1234',
+    subnets => ['main', 'alt'],
   }
 
-  aws_rrset {"SRV _sip._tcp.test2.com.":
+  aws_rrset {"SRV _test._tcp.test2.com.":
     ttl => 123,
     zone => 'test2.com.',
     value => [
-      '1 10 80 %{public_ip} '
+      '1 10 80 %{public_ip}',
+      '1 10 %{port} %{cname}'
     ],
     targets => [
-      Aws_ec2_instance['node']
+      Aws_ec2_instance['node'],
+      Aws_rds_instance['rdsdb'],
     ]
   }
+
+
 
 
 

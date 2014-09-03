@@ -35,6 +35,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
     end
 
     flushing :ensure => :present do
+      also_flush :dhcp_options
       collection.create(resource[:cidr],
         :instance_tenancy => resource[:instance_tenancy]
       )
@@ -126,13 +127,13 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
           sn.delete
         end
       rescue Exception => e
-        if e.message =~ 'has dependencies and cannot be deleted'
-          puts "Waiting for subnet to clear..."
+        if e.message =~ /has dependencies and cannot be deleted/
+          debug "Waiting for subnet to clear..."
         else
           raise
         end
       end
-      subnets.all?{|sn| !sn.exists?}
+      subnets.all?{|sn| !(sn.state =~ /(pending|available)/)}
     end
 
     # Finally, the VPC itself

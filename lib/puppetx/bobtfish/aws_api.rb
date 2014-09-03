@@ -63,7 +63,7 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
   # Return an ensure state to for the given `aws_item`.
   # Can be implemented by `ensure_form_state`.
   def self.get_ensure_state(aws_item)
-    raise NotImplementedError, "Um #{name} - #{aws_item}"
+    raise NotImplementedError
   end
 
   # Wait for any state transitions in AWS to finish applying.
@@ -163,15 +163,20 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     self.ensure == :present
   end
 
-
+  class WaitTimeoutError < Exception
+  end
+  @@default_timeout = 60
   # Wait until arbitrary block becomes true
-  def wait_until(timeout=60, cycle=1, fatigue=1.2, &block)
+  def wait_until(timeout=@@default_timeout, cycle=1, fatigue=1.2, &block)
     waited = 0
-    until waited > timeout or block.call
+    until block.call
       debug "#{self} is waiting for resource (%5.2f/%2ds +%5.2f)..."% [waited, timeout, cycle]
       sleep cycle
       waited += cycle
       cycle *= fatigue
+      if waited > timeout
+        raise WaitTimeoutError, "Waiting for aws resources timed out after #{waited} seconds!"
+      end
     end
   end
 
@@ -251,6 +256,15 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     end
   end
 
+  # Set the given properties to flush.
+  # Normally useful inside `flushing :ensure => :present` block for setting up dependent
+  # items (by default properties are not set to flush from their absent state).
+  def also_flush(*properties)
+    properties.each do |prop|
+      @property_flush[prop] = resource[prop]
+    end
+  end
+
   # Lookup system
 
   # Lookup a `type_name` by the value of `property` in type
@@ -269,6 +283,9 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     self.class.catalog_lookup(resource.catalog, type_name, resource_name)
   end
 
+  class LookupNotFound < Exception
+  end
+
   def self.catalog_lookup(catalog, type_name, resource_name)
     if not resource_name or resource_name =~ /^\s+$/
       raise "Can't lookup #{type_name} with blank lookup-name"
@@ -283,7 +300,7 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     if found
       return found.provider
     else
-      raise "Lookup failed: #{type_name.capitalize}[#{resource_name}] not found"
+      raise LookupNotFound, "Lookup failed: #{type_name.capitalize}[#{resource_name}] not found"
     end
   end
 
@@ -353,7 +370,12 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     # Also set up region accessor (unless we explicitly don't have a region)
     unless type_name.nil?
       define_method :region do
-        @property_hash[:region]
+        # don't just check nil in case something set the region specifically to nil
+        if @property_hash.has_key? :region
+          @property_hash[:region]
+        else
+          self.class.find_region(self.resource)
+        end
       end
     end
 

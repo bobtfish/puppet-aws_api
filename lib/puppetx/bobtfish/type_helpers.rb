@@ -124,8 +124,6 @@ module Puppetx
       # TODO: ... autoload region through provider
       def unsafe_validate(value)
         super
-        puts Puppet::Parser::Functions.function('aws_azs').inspect
-
         azs = function_aws_azs(resource[:region])
         unless azs.include? value
           raise ArgumentError, "#{value} is not a valid AZ for the current region. (Valid AZs for region #{resource[:region]} are: #{azs})"
@@ -137,7 +135,11 @@ module Puppetx
       def self.included(other)
         other.defaultvalues
         other.newvalue(:purged) do
-          resource.provider.purge
+          provider.ensure = :purged
+        end
+
+        def insync?(is)
+          super(is) or (should == :purged and is == :absent)
         end
       end
     end

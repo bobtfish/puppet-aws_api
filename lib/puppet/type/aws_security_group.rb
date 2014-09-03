@@ -15,11 +15,13 @@ Puppet::Type.newtype(:aws_security_group) do
   end
 
   newproperty(:authorize_ingress) do
+    defaultto []
     include Puppetx::Bobtfish::SortedDeepCompare
     include Puppetx::Bobtfish::PermissionCollection
   end
 
   newproperty(:authorize_egress) do
+    defaultto []
     include Puppetx::Bobtfish::SortedDeepCompare
     include Puppetx::Bobtfish::PermissionCollection
   end
