@@ -17,8 +17,12 @@ Puppet::Type.newtype(:aws_cache_cluster) do
     end
   end
   ensurable
-  newproperty(:cache_node_type)
+  newproperty(:cache_node_type) do
+    include Puppetx::Bobtfish::RequiredValue
+    newvalues /^cache\.t\d\.\w+$/
+  end
   newproperty(:engine) do
+    include Puppetx::Bobtfish::RequiredValue
     newvalue 'redis'
   end
   newproperty(:engine_version)
@@ -29,14 +33,17 @@ Puppet::Type.newtype(:aws_cache_cluster) do
   autorequire(:aws_security_group) do
     self[:security_groups]
   end
+
   newproperty(:subnets) do
     include Puppetx::Bobtfish::SortedDeepCompare
-    defaultto []
+    include Puppetx::Bobtfish::RequiredValue
+    # (making this optional would require an alternate mechanism for dealing with regions)
   end
+
   autorequire(:aws_subnet) do
     self[:subnets]
   end
-  newproperty(:auto_minor_version_upgrade)
+  newproperty(:auto_minor_version_upgrade, :boolean=>true)
   newproperty(:endpoint) do
     include Puppetx::Bobtfish::ReadOnlyProperty
     desc "Read-only: endpoint thingy"

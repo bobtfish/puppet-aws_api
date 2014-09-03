@@ -10,7 +10,7 @@ Puppet::Type.newtype(:aws_vgw) do
   newproperty(:vpn_type) do
   end
 
-  newproperty(:availability_zone) do
+  newparam(:availability_zone) do
   end
 end
 

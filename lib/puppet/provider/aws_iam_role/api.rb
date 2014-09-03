@@ -45,7 +45,7 @@ Puppet::Type.type(:aws_iam_role).provide(:api, :parent => Puppetx::Bobtfish::Aws
   def policy_document
     @policy_document ||= {
       'Version' => '2012-10-17',
-      'Statement' => nil
+      'Statement' => @property_hash[:permissions]
     }
   end
 
@@ -53,7 +53,7 @@ Puppet::Type.type(:aws_iam_role).provide(:api, :parent => Puppetx::Bobtfish::Aws
     @assume_role_policy_document ||= {'Statement' => [{
       'Action' => 'sts:AssumeRole',
       'Effect' => 'Allow',
-      'Principal' => {'Service' => service},
+      'Principal' => {'Service' => @property_hash[:service_principal]},
       'Sid' => ''
     }], 'Version' => '2012-10-17'}
   end
@@ -73,6 +73,9 @@ Puppet::Type.type(:aws_iam_role).provide(:api, :parent => Puppetx::Bobtfish::Aws
       )
       return # don't continue flushing
     end
+
+    self.assume_role_policy_document['Statement'][0]['Principal']['Service'] = resource[:service_principal]
+    self.policy_document['Statement'] = resource[:permissions]
 
     flushing :ensure => :present do
 

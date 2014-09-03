@@ -78,8 +78,8 @@ Puppet::Type.newtype(:aws_rrset) do
   end
 
   newproperty(:ttl) do
-      desc "TTL in seconds"
-      include Puppetx::Bobtfish::EnsureIntValue
+    desc "TTL in seconds"
+    include Puppetx::Bobtfish::EnsureIntValue
   end
 
 

@@ -1,7 +1,7 @@
 # some very lazy smoke tests
 
-# $ensure = present
-$ensure = purged
+$ensure = present
+# $ensure = purged
 
 
 aws_vpc { 'test':
@@ -30,6 +30,13 @@ if $ensure != 'purged' {
     region => 'us-west-2',
   }
 
+
+  aws_igw{ "test-igw":
+    vpc => "test",
+    route_to_main => true,
+  }
+
+
   aws_subnet {'main':
      vpc => 'test',
      cidr => '10.0.1.0/24',
@@ -51,8 +58,6 @@ if $ensure != 'purged' {
   }
 
 
-
-
   aws_iam_role {'test':
     service_principal => 'ec2.amazonaws.com',
     permissions => [{
@@ -70,6 +75,8 @@ if $ensure != 'purged' {
   $ami = $ubuntu14['us-west-2']
 
   aws_security_group {"test:default":
+    authorize_ingress => [{"protocol"=>"any", "ports"=>[], "sources"=>["test:default"]}],
+    authorize_egress => [{"protocol"=>"any", "ports"=>[], "sources"=>["0.0.0.0/0"]}]
   }
 
   aws_ec2_instance {"node":
@@ -77,10 +84,23 @@ if $ensure != 'purged' {
     instance_type => 't2.micro',
     subnet => 'main',
     iam_role => 'test',
-    security_groups => 'test:default',
+    security_groups => ['test:default'],
     key_name => 'puppet-test',
     user_data => "secret=blahblhburgertown",
     associate_public_ip_address => true,
+  }
+
+  aws_cache_cluster{"redis":
+    cache_node_type => 'cache.t1.micro',
+    security_groups => ['test:default'],
+    engine => 'redis',
+    subnets => ['main', 'alt'],
+  }
+
+  aws_elb{ "test-elb":
+    subnets => ['main', 'alt'],
+    security_groups => ['test:default'],
+
   }
 
 
@@ -89,11 +109,15 @@ if $ensure != 'purged' {
     zone => 'test2.com.',
     value => [
       '1 10 80 %{public_ip}',
-      '1 10 %{port} %{cname}'
+      '1 10 %{port} %{cname}',
+      '1 10 %{port} %{cname}',
+      '1 10 %{port} %{cname}',
     ],
     targets => [
       Aws_ec2_instance['node'],
       Aws_rds_instance['rdsdb'],
+      Aws_cache_cluster['redis'],
+      Aws_elb['main'],
     ]
   }
 

@@ -24,7 +24,7 @@ Puppet::Type.type(:aws_rds_instance).provide(:api, :parent => Puppetx::Bobtfish:
     &:db_instance_status
   )
 
-  @@default_timeout = 600
+  default_timeout 900 # rds instances can be REALLY slow to start
 
   def init_property_hash
     super
@@ -76,7 +76,7 @@ Puppet::Type.type(:aws_rds_instance).provide(:api, :parent => Puppetx::Bobtfish:
       end
     }
     security_groups = resource[:security_groups].collect do |sg|
-      lookup(:aws_security_group, sg).id
+      lookup(:aws_security_group, sg).aws_item.id
     end
 
     flushing :ensure => :present do

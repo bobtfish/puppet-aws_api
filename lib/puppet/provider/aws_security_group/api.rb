@@ -4,7 +4,7 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppetx::Bobtfis
   include Puppetx::Bobtfish::TaggableProvider
 
   flushing_resource_methods :read_only => [
-    :description, :vpc, :authorize_ingress, :authorize_egress]
+    :description, :vpc]
 
   def self.find_region(type)
     vpc = catalog_lookup(type.catalog, :aws_vpc, type.vpc_name)
@@ -46,7 +46,7 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppetx::Bobtfis
     end
 
     flushing :authorize_ingress do |rules|
-      aws_item.ingress_ip_permissions.revoke
+      aws_item.ingress_ip_permissions.each(&:revoke)
       rules.each do |rule|
         ports, protocol, sources = munge_rule(rule)
         aws_item.authorize_ingress protocol, ports, *sources
@@ -54,7 +54,7 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppetx::Bobtfis
     end
 
     flushing :authorize_egress do |rules|
-      aws_item.egress_ip_permissions.revoke
+      aws_item.egress_ip_permissions.each(&:revoke)
       rules.each do |rule|
         ports, protocol, sources = munge_rule(rule)
         aws_item.authorize_egress *sources, :protocol => protocol, :ports => ports
@@ -80,7 +80,13 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppetx::Bobtfis
     return {
       'protocol' => perm.protocol.to_s,
       'ports' => ports,
-      'sources' => perm.ip_ranges + perm.groups.map {|s| s.tags['Name']},
+      'sources' => perm.ip_ranges + perm.groups.map {|s|
+        if s.vpc?
+          "#{s.vpc.tags['Name'] || s.vpc.vpc_id}:#{s.name}"
+        else
+          s.name
+        end
+      },
     }
   end
 
@@ -108,8 +114,7 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppetx::Bobtfis
         lookup(:aws_security_group, source).aws_item
       end
     end
-
-    return ports, protocol, rule['ports']
+    return rule['ports'], protocol, sources
   end
 
 end

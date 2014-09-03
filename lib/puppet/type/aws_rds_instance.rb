@@ -5,6 +5,7 @@ Puppet::Type.newtype(:aws_rds_instance) do
   newparam(:name)
   ensurable
   newproperty(:allocated_storage) do
+    include Puppetx::Bobtfish::EnsureIntValue
     include Puppetx::Bobtfish::RequiredValue
     desc "The amount of storage (in gigabytes) to be initially allocated for the database instance."
   end
@@ -13,8 +14,8 @@ Puppet::Type.newtype(:aws_rds_instance) do
     newvalues /^db\.t\d\.\w+$/
   end
   newproperty(:engine) do
-    defaultto 'MySQL'
-    newvalues *%W(MySQL oracle-se1 oracle-se oracle-ee sqlserver-ee sqlserver-se sqlserver-ex sqlserver-web postgres)
+    defaultto 'mysql'
+    newvalues *%W(mysql oracle-se1 oracle-se oracle-ee sqlserver-ee sqlserver-se sqlserver-ex sqlserver-web postgres)
   end
   newproperty(:engine_version)
 
@@ -32,8 +33,8 @@ Puppet::Type.newtype(:aws_rds_instance) do
       # TODO: this is not strictlys peaking correct as it can depend on the parse-order
       # of the aprameters in the pp file - better solution is to perform inter-dependent
       # param setup at the type level if possible (is it?)
-      case (resource[:engine] || 'MySQL').to_s
-      when 'MySQL'
+      case (resource[:engine] || 'mysql').to_s
+      when 'mysql'
         unless (8..41).include? value.size
           raise ArgumentError, "MySQL passwords must contain from 8 to 41 characters."
         end

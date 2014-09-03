@@ -3,7 +3,7 @@ require 'puppetx/bobtfish/aws_api'
 Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppetx::Bobtfish::Aws_api) do
 
   flushing_resource_methods :read_only => [
-    :listeners, :subnets, :security_groups, :scheme]
+    :subnets, :security_groups, :scheme]
 
   find_region_from :aws_subnet, :subnets
 
@@ -18,14 +18,11 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
   def init_property_hash
     super
     map_init(:name, :scheme)
-    init :listeners, aws_item.listeners.map{ |l| {
-      'port' => l.port.to_s,
-      'protocol' => l.protocol.to_s,
-      'instance_port' => l.instance_port.to_s,
-      'instance_protocol' => l.instance_protocol.to_s
-    }}
+    init :listeners, aws_item.listeners.map(&method(:unmunge_listeners))
     init :subnets, aws_item.subnets.map {|s| s.tags['Name']}
-    init :security_groups, aws_item.security_groups.collect(&:name)
+    init :security_groups, aws_item.security_groups.collect{ |sg|
+      "#{sg.vpc.tags['Name'] || sg.vpc_id}:#{sg.name}"
+    }
     init :health_check, {
       'healthy_threshold' => aws_item.health_check[:healthy_threshold].to_s,
       'unhealthy_threshold' => aws_item.health_check[:unhealthy_threshold].to_s,
@@ -45,13 +42,8 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
     flushing :ensure => :present do
       also_flush(:health_check, :instances)
 
-      elb.collection.create(resource[:name],
-        :listeners => resource[:listeners].map{ |l| {
-          :load_balancer_port => l['port'].to_i,
-          :protocol => l['protocol'],
-          :instance_port => l['instance_port'].to_i,
-          :instance_protocol => l['instance_protocol']
-        }},
+      collection.create(resource[:name],
+        :listeners => resource[:listeners].map(&method(:munge_listeners)),
         :subnets => resource[:subnets].map{|s| lookup(:aws_subnet, s).aws_item },
         :security_groups => resource[:security_groups].map{ |s|
           lookup(:aws_security_group, s).aws_item
@@ -60,7 +52,14 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
       )
     end
 
+
     flushing :health_check, :target do |health, target|
+      # Always merge with current values:
+      health = (health || {}).merge(@property_hash[:health_check] || {})
+      # same idea with target (in case only one flushes)
+      target ||= @property_hash[:target]
+      puts "TARGET: #{target.inspect}"
+      puts "HEALTH: #{health.inspect}"
       aws_item.configure_health_check(
         :healthy_threshold => health['healthy_threshold'].to_i,
         :unhealthy_threshold => health['unhealthy_threshold'].to_i,
@@ -83,12 +82,57 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
       end
     end
 
+    flushing :listeners do |listeners|
+      # First, index current and wanted by port
+      wanted = Hash[listeners.collect{|l| [l['port'].to_i, l]}]
+      current = Hash[aws_item.listeners.collect{|l| [l.port, l]}]
 
+      # Now collect just the ports so we can do some set math
+      wanted_ports = wanted.keys
+      current_ports = current.keys
+
+      unwanted_ports = current_ports - wanted_ports
+      unwanted_ports.each do |port|
+        current[port].delete
+      end
+
+      changing_ports = current_ports & wanted_ports
+      changing_ports.each do |port|
+        current[port].delete
+        aws_item.listeners.create(munge_listeners(wanted[port]))
+      end
+
+      new_ports = wanted_ports - current_ports
+      new_ports.each do |port|
+        aws_item.listeners.create(munge_listeners(wanted[port]))
+      end
+    end
+
+    super
   end
 
   def substitutions
     {
       :cname => aws_item.dns_name,
+    }
+  end
+
+  protected
+  def munge_listeners(listener)
+    {
+      :load_balancer_port => listener['port'].to_i,
+      :protocol => listener['protocol'],
+      :instance_port => listener['instance_port'].to_i,
+      :instance_protocol => listener['instance_protocol']
+    }
+  end
+
+  def unmunge_listeners(listener)
+    {
+      'port' => listener.port.to_s,
+      'protocol' => listener.protocol.to_s,
+      'instance_port' => listener.instance_port.to_s,
+      'instance_protocol' => listener.instance_protocol.to_s
     }
   end
 end

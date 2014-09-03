@@ -163,11 +163,20 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     self.ensure == :present
   end
 
+  # set/get default timeout for class
+  # TODO: different setter for ensure => present only?
+  def self.default_timeout(timeout=nil)
+    if timeout.nil?
+      @default_timeout or superclass.default_timeout
+    else
+      @default_timeout = timeout
+    end
+  end
+  default_timeout 60
   class WaitTimeoutError < Exception
   end
-  @@default_timeout = 60
   # Wait until arbitrary block becomes true
-  def wait_until(timeout=@@default_timeout, cycle=1, fatigue=1.2, &block)
+  def wait_until(timeout=self.class.default_timeout, cycle=1, fatigue=1.2, &block)
     waited = 0
     until block.call
       debug "#{self} is waiting for resource (%5.2f/%2ds +%5.2f)..."% [waited, timeout, cycle]
@@ -197,6 +206,7 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
       mapped_properties = properties.pop
     end
 
+
     properties.each do |prop|
       @property_hash[prop] = if aws_item.is_a? Hash
         # sometimes we use the "raw" API and only have hash responses to work with
@@ -207,7 +217,12 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
     end
 
     mapped_properties.each do |puppet_prop, aws_prop|
-      @property_hash[puppet_prop] = aws_item.send(aws_prop)
+      @property_hash[puppet_prop] = if aws_item.is_a? Hash
+        # sometimes we use the "raw" API and only have hash responses to work with
+        aws_item[aws_prop]
+      else
+        aws_item.send(aws_prop)
+      end
     end
   end
 

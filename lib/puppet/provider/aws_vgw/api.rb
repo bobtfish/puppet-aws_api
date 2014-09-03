@@ -1,32 +1,24 @@
 require 'puppetx/bobtfish/aws_api'
 
 Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppetx::Bobtfish::Aws_api) do
-  mk_resource_methods
+  include Puppetx::Bobtfish::TaggableProvider
+
+  flushing_resource_methods :read_only => [:vpc, :vpn_type]
 
   find_region_from :aws_vpc, :vpc
 
   primary_api :ec2, :collection => :vpn_gateways
 
-  def self.instance_from_aws_item(region, item)
-    tags = item.tags.to_h
-    name = tags.delete('Name') || item.id
-    vpc_name = nil
-    if item.vpc
-      vpc_name = name_or_id item.vpc
-    end
-    new(
-      :aws_item         => item,
-      :name             => name,
-      :id               => item.id,
-      :vpc              => vpc_name,
-      :ensure           => :present, #TODO support state!
-      :tags             => tags,
-      :region      => region
-    )
+
+  def init_property_hash
+    super
+    init :vpc, aws_item.vpc.tags['Name'] || aws_item.vpc_id
+    vpnc = aws_item.vpn_connections.first
+    init :vpn_type, vpnc.vpn_type
   end
 
 
-  read_only(:region, :vpn_type, :region_name, :availability_zone)
+  # TODO: impelment using flush_when_ready
 
   def vpc=(name)
     @property_hash[:aws_item].attach(find_vpc_item_by_name(name))

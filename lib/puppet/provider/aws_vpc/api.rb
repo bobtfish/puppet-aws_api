@@ -129,12 +129,12 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
       end
     end
 
-    # wait_until do
-    #   dbis.all? do |dbi|
-    #     debug "Awaiting termination for RDS instance #{dbi.db_name}..."
-    #     !dbi.exists? or dbi.db_instance_status == 'deleted'
-    #   end
-    # end
+    wait_until(900) do
+      dbis.all? do |dbi|
+        debug "Awaiting termination for RDS instance #{dbi.db_name}..."
+        !dbi.exists? or dbi.db_instance_status == 'deleted'
+      end
+    end
 
     rds.client.describe_db_subnet_groups()[:db_subnet_groups].each do |sng|
       if sng[:vpc_id] == vpc.vpc_id

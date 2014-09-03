@@ -7,10 +7,10 @@ Puppet::Type.newtype(:aws_elb) do
     include Puppetx::Bobtfish::SortedDeepCompare
     # TODO: document, add validaiton (also on other properties)
     defaultto [{
-      :port => 80,
-      :protocol => 'http',
-      :instance_port => 80,
-      :instance_protocol => 'http',
+      'port' => '80',
+      'protocol' => 'http',
+      'instance_port' => '80',
+      'instance_protocol' => 'http',
     }]
   end
   ensurable
@@ -36,10 +36,10 @@ Puppet::Type.newtype(:aws_elb) do
 
   newproperty(:health_check) do
     defaultto({
-      "healthy_threshold" => "10",
-      "unhealthy_threshold" => "2",
-      "interval" => "30",
-      "timeout" => "5"
+      "healthy_threshold" => '10',
+      "unhealthy_threshold" => '2',
+      "interval" => '30',
+      "timeout" => '5'
     })
   end
 

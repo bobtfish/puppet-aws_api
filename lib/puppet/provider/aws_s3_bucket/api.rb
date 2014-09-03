@@ -13,7 +13,7 @@ Puppet::Type.type(:aws_s3_bucket).provide(:api, :parent => Puppetx::Bobtfish::Aw
     [nil]
   end
   def self.aws_items_for_region(region)
-    s3.buckets
+    s3(nil).buckets
   end
 
   ensure_from_state(

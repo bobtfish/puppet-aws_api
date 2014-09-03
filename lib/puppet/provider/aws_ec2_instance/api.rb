@@ -55,14 +55,14 @@ Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppetx::Bobtfish:
         }
       }
     })
-    init :security_groups, aws_item.security_groups.collect{ |sg| "#{sg.vpc.tags['Name']}:#{sg.name}"}
+    init :security_groups, aws_item.security_groups.collect{ |sg| "#{sg.vpc.tags['Name'] || sg.vpc_id}:#{sg.name}"}
 
     profile = self.class.instance_profiles[aws_item.iam_instance_profile_id]
     init :iam_role, profile[:instance_profile_name] if profile
 
   end
 
-  @@default_timeout = 300 # ec2 instances can be a bit slow to start at times
+  default_timeout 300 # ec2 instances can be a bit slow to start at times
 
   def flush_when_ready
     flushing :ensure => :absent do
