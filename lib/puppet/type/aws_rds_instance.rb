@@ -11,7 +11,7 @@ Puppet::Type.newtype(:aws_rds_instance) do
   end
   newproperty(:db_instance_class) do
     include Puppetx::Bobtfish::RequiredValue
-    newvalues /^db\.t\d\.\w+$/
+    newvalues /^db\.([tmr]|cr)\d\.\w+$/
   end
   newproperty(:engine) do
     defaultto 'mysql'

@@ -33,4 +33,12 @@ Puppet::Type.newtype(:aws_security_group) do
   def sg_name
     self[:name].split(':').last
   end
+
+  autorequire(:aws_security_group) do
+    (self[:authorize_egress] + self[:authorize_ingress]).collect do |rule|
+      rule['sources']
+    end.flatten.reject do |source|
+      source =~ Puppetx::Bobtfish::CIDRValidation::PATTERN
+    end
+  end
 end

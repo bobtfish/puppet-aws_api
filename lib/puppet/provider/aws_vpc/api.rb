@@ -100,13 +100,6 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
       wait_until {node.status == :terminated }
     end
 
-    # Security groups
-    vpc.security_groups.each do |sg|
-      next if sg.name == 'default'
-      debug "Disposing of Security Group: #{sg.name}"
-      sg.delete
-    end
-
     # Gateways
     igw = vpc.internet_gateway
     if igw
@@ -145,6 +138,23 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
 
     # Murder ELCC
     # TODO: get murderin'
+
+    # Security groups
+    cycle_sg_disposal = true
+    while cycle_sg_disposal
+      cycle_sg_disposal = false
+      vpc.security_groups.each do |sg|
+        next if sg.name == 'default'
+        debug "Disposing of Security Group: #{sg.name}"
+        begin
+          sg.delete
+        rescue AWS::EC2::Errors::DependencyViolation
+          debug "  ... has dependents - try again next round."
+          cycle_sg_disposal = true
+          next
+        end
+      end
+    end
 
     # Subnets
     # Things get a bit wierd here with dependencies and waiting,

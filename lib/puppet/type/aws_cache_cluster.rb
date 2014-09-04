@@ -19,7 +19,7 @@ Puppet::Type.newtype(:aws_cache_cluster) do
   ensurable
   newproperty(:cache_node_type) do
     include Puppetx::Bobtfish::RequiredValue
-    newvalues /^cache\.t\d\.\w+$/
+    newvalues /^cache\.[tmr]\d\.\w+$/
   end
   newproperty(:engine) do
     include Puppetx::Bobtfish::RequiredValue

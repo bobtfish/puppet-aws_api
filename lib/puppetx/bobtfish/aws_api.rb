@@ -276,7 +276,7 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
   # items (by default properties are not set to flush from their absent state).
   def also_flush(*properties)
     properties.each do |prop|
-      @property_flush[prop] = resource[prop]
+      @property_flush[prop] = resource[prop] if resource[prop]
     end
   end
 
@@ -455,10 +455,14 @@ class Puppetx::Bobtfish::Aws_api < Puppet::Provider
       define_method :wait_for_state_transitions do
         if aws_item
           wait_until do
-            state = block.call(aws_item)
-            state = state.to_sym if state.respond_to? :to_sym
-            # wait until state is no longer transitional
-            !transitional_states[state]
+            # do the check only if we don't have an `exists?`, or (if we do), if it
+            # returns true
+            if !aws_item.respond_to?(:exists?) or aws_item.exists?
+              state = block.call(aws_item)
+              state = state.to_sym if state.respond_to? :to_sym
+              # wait until state is no longer transitional
+              !transitional_states[state]
+            end
           end
 
         end

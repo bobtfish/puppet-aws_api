@@ -26,6 +26,8 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppetx::Bobtfis
       vpc_name = aws_item.vpc.tags['Name'] || aws_item.vpc_id
       init :vpc, vpc_name
       init :name, "#{vpc_name}:#{aws_item.name}"
+    else
+      init :name, aws_item.name
     end
     init :authorize_ingress, unmunge_rules(aws_item.ingress_ip_permissions)
     init :authorize_egress, unmunge_rules(aws_item.egress_ip_permissions)
@@ -39,11 +41,13 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppetx::Bobtfis
 
     flushing :ensure => :present do
       also_flush :authorize_ingress, :authorize_egress
-      collection.create(resource[:name],
+      collection.create(resource.sg_name,
         :description => resource[:description],
-        :vpc => lookup(:aws_vpc, resource[:vpc]).aws_item
+        :vpc => lookup(:aws_vpc, resource.vpc_name).aws_item
       )
     end
+
+    super
 
     flushing :authorize_ingress do |rules|
       aws_item.ingress_ip_permissions.each(&:revoke)
@@ -60,7 +64,6 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppetx::Bobtfis
         aws_item.authorize_egress *sources, :protocol => protocol, :ports => ports
       end
     end
-    super
   end
 
 
@@ -72,7 +75,7 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppetx::Bobtfis
 
   def unmunge_rule(perm)
    if perm.port_range
-      ports = [perm.port_range.first, perm.port_range.last].map(&:to_s)
+      ports = [perm.port_range.first, perm.port_range.last]
       ports = ports[0] if ports[0] == ports[1]
     else
       ports = []
@@ -111,10 +114,16 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppetx::Bobtfis
         source
       else
         # must be another SG, grab reference
-        lookup(:aws_security_group, source).aws_item
+        sg_item = lookup(:aws_security_group, source).aws_item
+        if sg_item.nil?
+          # Note: there is no real way around this without requiring a great deal of
+          # phased anchor setups in the manifests...
+          warn "Security group rule contained a reference to security group #{source.inspect}, which does not yet exist. Make sure to apply this manifest a second time to fill out these missing values."
+        end
+        sg_item
       end
-    end
-    return rule['ports'], protocol, sources
+    end.compact
+    return rule['ports'].to_i, protocol, sources
   end
 
 end

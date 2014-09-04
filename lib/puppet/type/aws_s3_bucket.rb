@@ -19,6 +19,14 @@ Puppet::Type.newtype(:aws_s3_bucket) do
   ensurable do
     include Puppetx::Bobtfish::Purgable
   end
-  newproperty(:region)
+  newproperty(:region) do
+    def insync?(is)
+      if is.nil? or is == 'us-east-1'
+        should.nil? or should == 'us-east-1'
+      else
+        super
+      end
+    end
+  end
 end
 

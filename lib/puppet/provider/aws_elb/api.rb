@@ -68,7 +68,7 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
     end
 
     flushing :instances do |instances|
-      wanted = instances.map{|name| lookup(:aws_ec2_instance, name)}
+      wanted = instances.map{|name| lookup(:aws_ec2_instance, name).aws_item}
       current = aws_item.instances.to_a
       unwanted = current - wanted
       needed = wanted - current
@@ -128,9 +128,9 @@ Puppet::Type.type(:aws_elb).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
 
   def unmunge_listeners(listener)
     {
-      'port' => listener.port.to_s,
+      'port' => listener.port,
       'protocol' => listener.protocol.to_s,
-      'instance_port' => listener.instance_port.to_s,
+      'instance_port' => listener.instance_port,
       'instance_protocol' => listener.instance_protocol.to_s
     }
   end

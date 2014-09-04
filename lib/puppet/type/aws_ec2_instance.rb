@@ -15,7 +15,7 @@ Puppet::Type.newtype(:aws_ec2_instance) do
 
   newproperty(:instance_type) do
     include Puppetx::Bobtfish::RequiredValue
-    newvalues /^t\d\.\w+$/
+    newvalues /^([tcmrihg]|hs)\d\.\w+$/
   end
 
   newproperty(:iam_role)
