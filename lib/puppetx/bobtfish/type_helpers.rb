@@ -32,6 +32,7 @@ module Puppetx
 
       private
       def deep_sort(value)
+        value = normalize_obj(value)
         case value
         when Hash
           sorted_hsh = {}
@@ -52,6 +53,13 @@ module Puppetx
           value.to_a
         else
           value
+        end
+      end
+
+      def normalize_obj(obj)
+        # Discard various weird AWS types
+        %w(to_int to_str to_ary to_hash to_enum).each do |conversion|
+          return obj.send(conversion.to_sym) if obj.respond_to?(conversion.to_sym)
         end
       end
     end
