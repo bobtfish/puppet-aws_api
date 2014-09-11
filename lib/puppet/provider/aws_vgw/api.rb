@@ -1,32 +1,24 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'puppet_x', 'bobtfish', 'ec2_api.rb'))
+require 'puppetx/bobtfish/aws_api'
 
-Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
-  mk_resource_methods
+Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppetx::Bobtfish::Aws_api) do
+  include Puppetx::Bobtfish::TaggableProvider
 
-  def self.new_from_aws(item, region_name)
-    tags = item.tags.to_h
-    name = tags.delete('Name') || item.id
-    vpc_name = nil
-    if item.vpc
-      vpc_name = name_or_id item.vpc
-    end
-    new(
-      :aws_item         => item,
-      :name             => name,
-      :id               => item.id,
-      :vpc              => vpc_name,
-      :ensure           => :present,
-      :tags             => tags,
-      :region_name      => region_name
-    )
-  end
-  def self.instances
-    regions.collect do |region_name|
-      ec2.regions[region_name].vpn_gateways.reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(item, region_name) }
-    end.flatten
+  flushing_resource_methods :read_only => [:vpc, :vpn_type]
+
+  find_region_from :aws_vpc, :vpc
+
+  primary_api :ec2, :collection => :vpn_gateways
+
+
+  def init_property_hash
+    super
+    init :vpc, aws_item.vpc.tags['Name'] || aws_item.vpc_id
+    vpnc = aws_item.vpn_connections.first
+    init :vpn_type, vpnc.vpn_type
   end
 
-  read_only(:region, :vpn_type, :region_name, :availability_zone)
+
+  # TODO: impelment using flush_when_ready
 
   def vpc=(name)
     @property_hash[:aws_item].attach(find_vpc_item_by_name(name))

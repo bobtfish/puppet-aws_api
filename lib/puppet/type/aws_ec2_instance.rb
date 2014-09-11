@@ -1,21 +1,53 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'puppet_x', 'bobtfish', 'unordered_list_prop.rb'))
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'puppet_x', 'bobtfish', 'read_only_prop.rb'))
+require 'puppetx/bobtfish/type_helpers'
+
 Puppet::Type.newtype(:aws_ec2_instance) do
   @doc = "Manage AWS EC2 instances"
   newparam(:name)
-  ensurable
-  newproperty(:image_id)
-  newproperty(:instance_type)
+  ensurable do
+    self.defaultvalues
+    # newvalue :stopped
+  end
+
+  newproperty(:image_id) do
+    include Puppetx::Bobtfish::RequiredValue
+    newvalues /^ami-[a-f0-9]+$/
+  end
+
+  newproperty(:instance_type) do
+    include Puppetx::Bobtfish::RequiredValue
+    newvalues /^([tcmrihg]|hs)\d\.\w+$/
+  end
+
   newproperty(:iam_role)
-  newproperty(:region)
-  newproperty(:subnet)
-  newproperty(:key_name)
-  newproperty(:tags)
-  newparam(:associate_public_ip_address)
-  newproperty(:elastic_ip)
-  newproperty(:block_device_mappings, :parent => Puppet_X::Bobtfish::UnorderedValueListProperty)
-  newproperty(:security_groups, :parent => Puppet_X::Bobtfish::UnorderedValueListProperty) do
-    defaultto []
+
+  newproperty(:subnet) do
+    include Puppetx::Bobtfish::RequiredValue
+  end
+
+  newproperty(:key_name) do
+    include Puppetx::Bobtfish::RequiredValue
+  end
+
+  newproperty(:tags) do
+    include Puppetx::Bobtfish::EnsureHashValue
+  end
+
+
+  newparam(:associate_public_ip_address, :boolean => true)
+
+  newproperty(:elastic_ip, :boolean => true)
+
+  newproperty(:block_device_mappings) do
+    defaultto {}
+    include Puppetx::Bobtfish::SortedDeepCompare
+  end
+
+  newproperty(:security_groups) do
+    defaultto do
+      sn = resource.provider.lookup(:aws_subnet, resource[:subnet])
+      ["#{sn.resource[:vpc]}:default"]
+    end
+    include Puppetx::Bobtfish::SortedDeepCompare
   end
 
   autorequire(:aws_subnet) do
@@ -28,8 +60,11 @@ Puppet::Type.newtype(:aws_ec2_instance) do
     self[:security_groups]
   end
 
-  newproperty(:public_ip_address, :parent => Puppet_X::Bobtfish::ReadOnlyProperty) do
+  newproperty(:public_ip_address) do
     desc "Read-only: public ip of machine"
+    include Puppetx::Bobtfish::ReadOnlyProperty
   end
+
+  newparam(:user_data)
 end
 

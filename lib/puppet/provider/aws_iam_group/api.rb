@@ -1,9 +1,13 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'puppet_x', 'bobtfish', 'ec2_api.rb'))
+require 'puppetx/bobtfish/aws_api'
 
-Puppet::Type.type(:aws_iam_group).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
+Puppet::Type.type(:aws_iam_group).provide(:api, :parent => Puppetx::Bobtfish::Aws_api) do
   mk_resource_methods
 
-  def self.new_from_aws(item)
+  find_region_from nil
+
+  primary_api :iam, :collection => :groups
+
+  def self.instance_from_aws_item(region, item)
     policies = Hash[item.policies.to_h.map { |k,v| [k,v.to_h] }]
     new(
       :aws_item         => item,
@@ -14,9 +18,7 @@ Puppet::Type.type(:aws_iam_group).provide(:api, :parent => Puppet_X::Bobtfish::E
       :policies         => policies
     )
   end
-  def self.instances
-    iam.groups.collect { |item| new_from_aws(item) }
-  end
+
   read_only(:arn, :name, :policies) # can name even change?, can arn actually be set?
 
   def policies=(newpolicies)

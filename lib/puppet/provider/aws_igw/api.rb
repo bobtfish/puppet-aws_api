@@ -1,58 +1,47 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'puppet_x', 'bobtfish', 'ec2_api.rb'))
+require 'puppetx/bobtfish/aws_api'
 
-Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
-  mk_resource_methods
+Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppetx::Bobtfish::Aws_api) do
+  include Puppetx::Bobtfish::TaggableProvider
 
-  def self.new_from_aws(item)
-    tags = item.tags.to_h
-    name = tags.delete('Name') || item.id
-    vpc_name = nil
-    if item.vpc
-      vpc_name = name_or_id item.vpc
-    end
-    new(
-      :aws_item         => item,
-      :name             => name,
-      :id               => item.id,
-      :vpc              => vpc_name,
-      :ensure           => :present,
-      :tags             => tags
-    )
-  end
-  def self.instances
-    regions.collect do |region_name|
-      ec2.regions[region_name].internet_gateways.collect { |item| new_from_aws(item) }
-    end.flatten
+  flushing_resource_methods :read_only => [:vpc]
+
+  find_region_from :aws_vpc, :vpc
+
+  primary_api :ec2, :collection => :internet_gateways
+
+  ensure_from_state(
+    true => :present,
+    false => :absent,
+    &:exists?
+  )
+
+
+  def init_property_hash
+    super
+    init :vpc, aws_item.vpc.tags['Name'] || aws_item.vpc_id if aws_item.vpc
   end
 
-  read_only(:vpc)
+  def flush_when_ready
+    flushing :ensure => :absent do
+      aws_item.detach(aws_item.vpc) if aws_item.vpc
+      aws_item.delete
+      return
+    end
 
-  def create
-    if ! resource[:vpc]
-      fail "Must have a vpc to create an igw"
+    flushing :ensure => :present do
+      also_flush :route_to_main
+      @property_hash[:aws_item] = collection.create()
+      vpc = lookup(:aws_vpc, resource[:vpc]).aws_item
+      aws_item.attach(vpc)
     end
-    region_name = find_region_name_for_vpc_name resource[:vpc]
-    if !region_name
-      fail "Cannot find VPC named #{resource[:vpc]} for igw"
-    end
-    igw = ec2.regions[region_name].internet_gateways.create()
-    vpc = find_vpc_item_by_name(resource[:vpc])
-    igw.attach(vpc)
-    if resource[:route_to_main]
-      vpc.route_tables.main_route_table.create_route( '0.0.0.0/0',
-        :internet_gateway => igw
+
+    flushing :route_to_main => true do
+      aws_item.vpc.route_tables.main_route_table.create_route( '0.0.0.0/0',
+        :internet_gateway => aws_item
       )
     end
 
-    tag_with_name igw, resource[:name]
-    tags = resource[:tags] || {}
-    tags.each { |k,v| igw.add_tag(k, :value => v) }
-    igw
-  end
-  def destroy
-    @property_hash[:aws_item].detach(@property_hash[:aws_item].vpc) if @property_hash[:aws_item].vpc
-    @property_hash[:aws_item].delete
-    @property_hash[:ensure] = :absent
+    super
   end
 end
 

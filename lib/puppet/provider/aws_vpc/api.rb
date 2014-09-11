@@ -1,90 +1,68 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'puppet_x', 'bobtfish', 'ec2_api.rb'))
+require 'puppetx/bobtfish/aws_api'
 
-Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
-  mk_resource_methods
+Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppetx::Bobtfish::Aws_api) do
+  include Puppetx::Bobtfish::TaggableProvider
 
-  def self.vpcs_for_region(region)
-    ec2.regions[region].vpcs
-  end
-  def vpcs_for_region(region)
-    self.class.vpcs_for_region region
-  end
-  def self.new_from_aws(region_name, item)
-    tags = item.tags.to_h
-    name = tags.delete('Name') || item.id
-    dopts_item = find_dhopts_item_by_name item.dhcp_options_id
-    dopts_name = nil
-    if dopts_item
-      dopts_name = name_or_id dopts_item
-    end
-    new(
-      :aws_item         => item,
-      :name             => name,
-      :id               => item.id,
-      :ensure           => :present,
-      :cidr             => item.cidr_block,
-      :dhcp_options     => dopts_name,
-      :instance_tenancy => item.instance_tenancy.to_s,
-      :region           => region_name,
-      :tags             => tags
+  flushing_resource_methods :read_only => %w(cidr region instance_tenancy)
+
+  find_region_from :region
+
+  primary_api :ec2, :collection => :vpcs
+
+  ensure_from_state(
+    :available => :present,
+    :pending => :available,
+    &:state
+  )
+
+  def init_property_hash
+    super
+    map_init(
+      :instance_tenancy,
+      :cidr => :cidr_block,
     )
+    init :dhcp_options, aws_item.dhcp_options.tags['Name']
   end
-  def self.instances
-    regions.collect do |region_name|
-      vpcs_for_region(region_name).collect { |item| new_from_aws(region_name, item) }
-    end.flatten
-  end
-  read_only(:cidr, :id,  :region, :aws_dops, :instance_tenancy) # can't set ID can we?
-  def dhcp_options=(value)
-    dopts = find_dhopts_item_by_name(value)
-    fail("Could not find dhcp options named '#{value}'") unless dopts
-    @property_hash[:aws_item].dhcp_options = dopts.id
-    @property_hash[:dhcp_options] = value
-  end
-  def create
-    dhopts_name = nil
-    if resource[:dhcp_options]
-      dhopts = find_dhopts_item_by_name(resource[:dhcp_options])
-      fail("Cannot find dhcp options named '#{resource[:dhcp_options]}'") unless dhopts
-      dhopts_name = dhopts.id
+
+  def flush_when_ready
+    flushing :ensure => :purged do
+      self.purge_vpc
+      return
+    end
+    flushing :ensure => :absent do
+      aws_item.delete
+      return
     end
 
-    vpc = ec2.regions[resource[:region]].vpcs.create(resource[:cidr])
-    wait_until_state vpc, :available
-    tag_with_name vpc, resource[:name]
-    tags = resource[:tags] || {}
-    tags.each { |k,v| vpc.add_tag(k, :value => v) }
-    # Tag-name the default SG for this VPC so we know we're managing it:
-    vpc.security_groups.find{|sg| sg.name == 'default'}.tags['Name'] = 'default'
-
-    if dhopts_name
-      vpc.dhcp_options = dhopts_name
+    flushing :ensure => :present do
+      also_flush :dhcp_options
+      collection.create(resource[:cidr],
+        :instance_tenancy => resource[:instance_tenancy]
+      )
     end
-    vpc
 
+    flushing :dhcp_options do |value|
+      aws_item.dhcp_options = lookup(:aws_dopts, value).aws_item
+    end
+
+    super
   end
-  def destroy
-    @property_hash[:aws_item].delete
-    @property_hash[:ensure] = :absent
-  end
-  def purge
-    vpc = @property_hash[:aws_item]
+
+
+  def purge_vpc
+    vpc = aws_item
     subnets = vpc.subnets
 
-    # First, any load balancers:
-    regions = subnets.collect do |sn|
-      sn.availability_zone.region_name
-    end
-    regions.each do |region|
-      elb(region).load_balancers.each do |lb|
-        if lb.subnets.all?{|sn| subnets.include?(sn)}
-          debug "Disposing of Elastic Load Balancer #{lb.name}"
-          lb.delete
-          sleep 1 until not lb.exists?
-        end
+    # First, any load balancers living exclusively on our subnets
+    elb.load_balancers.each do |lb|
+      if lb.subnets.all?{|sn| subnets.include?(sn)}
+        debug "Disposing of Elastic Load Balancer #{lb.name}"
+        lb.delete
+        wait_until { not lb.exists? }
       end
     end
-    # Freeze the current set
+
+    # Frozen copy of the current ec2 set
     instances = vpc.instances.to_a
 
     # Stop everything:
@@ -93,12 +71,14 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       node.stop
     end
     instances.each do |node|
-      wait_until_status(node, :stopped)
+      wait_until { node.status == :stopped }
+
       # Dispose of EIPs
       eip = node.elastic_ip
       if eip
         debug "Releasing #{eip}"
         eip.disassociate
+        wait_until { not eip.associated? }
         eip.release
       end
       # Force-release volumes, and destroy them
@@ -106,8 +86,8 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
         debug "Detatching #{mnt}"
         volume = dev.volume
         dev.delete(:force => true)
-        wait_until_status(volume, :available)
-        debug "Disposing of #{dev.volume.tags['Name']}"
+        wait_until { volume.status == :available}
+        debug "Disposing of #{volume.tags['Name']}"
         volume.delete
       end
       debug "Terminating #{node.tags['Name']}"
@@ -117,40 +97,87 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
 
     instances.each do |node|
       # Ensure everyone is terminated or else clearing SGs will fail
-      wait_until_status(node, :terminated)
-    end
-
-    # Security groups
-    vpc.security_groups.each do |sg|
-      next if sg.name == 'default'
-      debug "Disposing of Security Group: #{sg.name}"
-      sg.delete
+      wait_until {node.status == :terminated }
     end
 
     # Gateways
     igw = vpc.internet_gateway
     if igw
-      debug "Detach Internet Gateway: #{igw.tags['Name']}"
+      igw_id = igw.tags['Name'] || igw.id
+      debug "Detach Internet Gateway: #{igw_id}"
       igw.detach(vpc)
-      debug "Disposing of #{igw.tags['Name']}"
+      debug "Disposing of #{igw_id}"
       igw.delete
     end
 
-    # Just give everything a little bit of time to settle so we don't get depdendency
-    # violations - experience has shown this to be simpler and more reliable than
-    # explicit checks.
-    sleep 2
+    # Murder RDS:
+    dbis = []
+    rds.db_instances.each do |dbi|
+      if dbi.vpc_id == vpc.vpc_id
+        debug "Deleting RDS instance: #{dbi.db_name}"
+        dbis << dbi
+        unless dbi.status == 'deleting'
+          dbi.delete(:final_db_snapshot_identifier => "#{dbi.db_name}-final")
+        end
+      end
+    end
+
+    wait_until(900) do
+      dbis.all? do |dbi|
+        debug "Awaiting termination for RDS instance #{dbi.db_name}..."
+        !dbi.exists? or dbi.db_instance_status == 'deleted'
+      end
+    end
+
+    rds.client.describe_db_subnet_groups()[:db_subnet_groups].each do |sng|
+      if sng[:vpc_id] == vpc.vpc_id
+        debug "Clearing subnets from RDS SNG #{sng[:db_subnet_group_name]}..."
+        rds.client.delete_db_subnet_group(:db_subnet_group_name => sng[:db_subnet_group_name])
+      end
+    end
+
+    # Murder ELCC
+    # TODO: get murderin'
+
+    # Security groups
+    cycle_sg_disposal = true
+    while cycle_sg_disposal
+      cycle_sg_disposal = false
+      vpc.security_groups.each do |sg|
+        next if sg.name == 'default'
+        debug "Disposing of Security Group: #{sg.name}"
+        begin
+          sg.delete
+        rescue AWS::EC2::Errors::DependencyViolation
+          debug "  ... has dependents - try again next round."
+          cycle_sg_disposal = true
+          next
+        end
+      end
+    end
 
     # Subnets
-    subnets.each do |sn|
-      debug "Disposing of subnet: #{sn.tags['Name']}"
-      sn.delete
+    # Things get a bit wierd here with dependencies and waiting,
+    # so just keep trying - it should work in a few seconds
+    wait_until do
+      begin
+        subnets.each do |sn|
+          debug "Disposing of subnet: #{sn.tags['Name']}"
+          sn.delete
+        end
+      rescue Exception => e
+        if e.message =~ /has dependencies and cannot be deleted/
+          debug "Waiting for subnet to clear..."
+        else
+          raise
+        end
+      end
+      subnets.all?{|sn| !(sn.state =~ /(pending|available)/)}
     end
 
     # Finally, the VPC itself
     debug "Purging VPC #{vpc.tags['Name']}"
     vpc.delete
-    @property_hash[:ensure] = :purged
   end
 end
 

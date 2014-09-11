@@ -1,114 +1,124 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'puppet_x', 'bobtfish', 'ec2_api.rb'))
+require 'puppetx/bobtfish/aws_api'
 
-Puppet::Type.type(:aws_rds_instance).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
-  mk_resource_methods
+Puppet::Type.type(:aws_rds_instance).provide(:api, :parent => Puppetx::Bobtfish::Aws_api) do
 
-  def self.instances_for_region(region)
-    rds(region).client.describe_db_instances.data[:db_instances]
-  end
-  def instances_for_region(region)
-    self.class.instances_for_region region
-  end
-  def self.new_from_aws(region_name, item)
-    status = case item[:db_instance_status]
-    when 'available'
-      :present
-    else
-      :absent
-    end
+  flushing_resource_methods :read_only => [
+    :region, :db_instance_class, :engine, :engine_version, :master_username, :multi_az, :endpoint]
 
-    endpoint = if item[:endpoint]
-      "#{item[:endpoint][:address]}:#{item[:endpoint][:port]}"
-    end
+  find_region_from :aws_subnet, :subnets
 
+  primary_api :rds, :collection => :db_instances
 
-    security_groups = item[:vpc_security_groups].collect do |sg|
-      ec2.regions[region_name].security_groups[sg[:vpc_security_group_id]].name
-    end
+  ensure_from_state(
+    :available => :present,
+    :'backing-up' => :available,
+    :creating => :available,
+    :deleted => :absent,
+    :deleting => :deleted,
+    :failed => :absent,
+    :'incompatible-restor' => :absent,
+    :modifying => :available,
+    :rebooting => :available,
+    :'resetting-master-credentials' => :available,
+    :'storage-full' => :absent,
+    &:db_instance_status
+  )
 
-    subnets = if item[:db_subnet_group]
-      item[:db_subnet_group][:subnets].collect do |sn|
-        ec2.regions[region_name].subnets[sn[:subnet_identifier]].tags['Name']
-      end
-    else
-      []
-    end
+  default_timeout 900 # rds instances can be REALLY slow to start
 
-    new(
-      :name             => item[:db_instance_identifier],
-      :ensure           => status,
-      :region           => region_name,
-      :db_instance_class=> item[:db_instance_class],
-      :engine           => item[:engine],
-      :engine_version   => item[:engine_version],
-      :master_username  => item[:master_username],
-      :allocated_storage=> item[:allocated_storage].to_s,
-      :multi_az         => item[:multi_az],
-      :endpoint         => endpoint,
-      :security_groups  => security_groups,
-      :subnets          => subnets
+  def init_property_hash
+    super
+    map_init(
+      :db_instance_class,
+      :engine,
+      :engine_version,
+      :master_username,
+      :allocated_storage,
+      :multi_az,
+      :name => :db_instance_identifier,
     )
-  end
 
-  def aws_item
-    rds(region).db_instances[@property_hash[:name]]
-  end
+    if aws_item.endpoint_address
+      init :endpoint, "#{aws_item.endpoint_address}:#{aws_item.endpoint_port}"
+    end
 
-  def self.instances
-    regions.collect do |region_name|
-      instances_for_region(region_name).collect { |item|
-        new_from_aws(region_name, item)
+    vpc = aws_item.vpc
+
+    if raw_aws_item[:vpc_security_groups]
+      init :security_groups, raw_aws_item[:vpc_security_groups].collect{ |sg|
+        "#{vpc.tags['Name'] || vpc.vpc_id}:#{vpc.security_groups[sg[:vpc_security_group_id]].name}"
       }
-    end.flatten
+    end
+
+    if raw_aws_item[:db_subnet_group]
+      init :subnets, raw_aws_item[:db_subnet_group][:subnets].collect{ |sn|
+        vpc.subnets[sn[:subnet_identifier]].tags['Name']
+      }
+    end
+
   end
 
-  read_only(:region, :db_instance_class, :engine, :engine_version, :master_username, :multi_az, :endpoint)
+  def flush_when_ready
+    flushing :ensure => :absent do
+      rds.client.delete_db_subnet_group(:db_subnet_group_name => resource[:name])
+      rds.client.delete_db_instance(
+        :db_instance_identifier => resource[:name],
+        :final_db_snapshot_identifier => "#{resource[:name]}-final",
+      )
+      return
+    end
 
-  def subnets=(subnets)
     sn_group_opts = {
       :db_subnet_group_name => resource[:name],
       :db_subnet_group_description => "Subnet(s) for #{resource[:name]}: #{resource[:subnets].join(', ')}",
-      :subnet_ids => subnets.collect do |sn|
-        lookup(:aws_subnet, sn).id
+      :subnet_ids => resource[:subnets].collect do |sn|
+        lookup(:aws_subnet, sn).aws_item.id
       end
     }
-    rds(resource[:region]).client.modify_db_subnet_group(sn_group_opts)
-  rescue AWS::RDS::Errors::DBSubnetGroupNotFoundFault
-    rds(resource[:region]).client.create_db_subnet_group(sn_group_opts)
-  end
-
-  def security_groups=(sgs)
-    aws_item.modify(:vpc_security_group_ids=>sgs.collect{|sg|
-      lookup(:aws_security_group, sg).id
-    })
-  end
-
-
-
-  def create
-    self.subnets = resource[:subnets]
     security_groups = resource[:security_groups].collect do |sg|
-      lookup(:aws_security_group, sg).id
+      lookup(:aws_security_group, sg).aws_item.id
     end
 
-    db = rds(resource[:region]).db_instances.create(resource[:name],
-      :db_name            => resource[:name].gsub('-', '_'),
-      :allocated_storage  => resource[:allocated_storage].to_i,
-      :db_instance_class  => resource[:db_instance_class],
-      :engine             => resource[:engine],
-      :engine_version     => resource[:engine_version],
-      :master_username    => resource[:master_username],
-      :master_user_password => resource[:master_user_password],
-      :multi_az           => resource[:multi_az],
-      :vpc_security_group_ids => security_groups,
-      :db_subnet_group_name => resource[:name],
-    )
+    flushing :ensure => :present do
+      rds.client.create_db_subnet_group(sn_group_opts)
+      rds_conf = {
+        :db_name            => resource[:name].gsub('-', '_'),
+        :allocated_storage  => resource[:allocated_storage].to_i,
+        :db_instance_class  => resource[:db_instance_class],
+        :engine             => resource[:engine].to_s,
+        :master_username    => resource[:master_username],
+        :master_user_password => resource[:master_user_password],
+        :multi_az           => resource[:multi_az] || false,
+        :vpc_security_group_ids => security_groups,
+        :db_subnet_group_name => resource[:name],
+      }
+      if resource[:engine_version]
+        rds_conf[:engine_version ] = resource[:engine_version]
+      end
+      collection.create(resource[:name], rds_conf)
+    end
+
+
+    flushing :subnets do |subnets|
+      rds.client.modify_db_subnet_group(sn_group_opts)
+    end
+
+    flushing :security_groups do |sgs|
+      aws_item.modify(:vpc_security_group_ids => security_groups)
+    end
   end
-  def destroy
-    client = rds(resource[:region]).client
-    client.delete_db_subnet_group(:db_subnet_group_name => resource[:name])
-    client.delete_db_instance(:db_instance_identifier => resource[:name])
-    @property_hash[:ensure] = :absent
+
+  def substitutions
+    {
+      :cname => aws_item.endpoint_address,
+      :port => aws_item.endpoint_port,
+    }
+  end
+
+  private
+
+  def raw_aws_item
+    @raw_aws_item ||= aws_item.send(:get_resource)[:db_instances][0]
   end
 end
 

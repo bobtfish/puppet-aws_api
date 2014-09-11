@@ -1,9 +1,13 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'puppet_x', 'bobtfish', 'ec2_api.rb'))
+require 'puppetx/bobtfish/aws_api'
 
-Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
+Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppetx::Bobtfish::Aws_api) do
   mk_resource_methods
 
-  def self.new_from_aws(region_name, item)
+  find_region_from :aws_subnet, :subnets
+
+  primary_api :ec2, :collection => :route_tables
+
+  def self.instance_from_aws_item(region, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     new(
@@ -26,15 +30,9 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
         }.reject { |k, v| v.nil? } }
     )
   end
+
   read_only(:vpc, :subnets, :routes, :main)
-  def self.instances
-    regions.collect do |region_name|
-      ec2.regions[region_name].route_tables.collect { |item| new_from_aws(region_name,item) }
-    end.flatten
-  end
-  def exists?
-    @property_hash[:ensure] == :present
-  end
+
   def create
     vpc = find_vpc_item_by_name resource[:vpc]
     if !vpc

@@ -1,9 +1,21 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'puppet_x', 'bobtfish', 'ec2_api.rb'))
+require 'puppetx/bobtfish/aws_api'
 
-Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
+Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppetx::Bobtfish::Aws_api) do
   mk_resource_methods
 
-  def self.new_from_aws(region_name, item)
+  def self.find_region(type)
+    type_name, resource_name = if type[:vgw] and not type[:vgw].empty?
+      [:aws_vgw, type[:vgw]]
+    else
+      [:aws_cgw, type[:cgw]]
+    end
+    provider = catalog_lookup(type.catalog, type_name, resource_name)
+    provider.class.find_region(provider.resource)
+  end
+
+  primary_api :ec2, :collection => :vpn_connections
+
+  def self.instance_from_aws_item(region, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
     cgw_name = nil
@@ -20,16 +32,12 @@ Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :id               => item.id,
       :cgw              => cgw_name,
       :vgw              => vgw_name,
-      :region           => region_name,
+      :region           => region,
       :ensure           => :present,
       :tags             => tags
     )
   end
-  def self.instances
-    regions.collect do |region_name|
-      ec2.regions[region_name].vpn_connections.reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(region_name,item) }
-    end.flatten
-  end
+
   read_only(:region, :vgw, :cgw, :type, :routing, :static_routes)
   def create
     begin
