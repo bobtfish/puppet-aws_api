@@ -19,7 +19,10 @@ Puppet::Type.type(:aws_iam_group).provide(:api, :parent => Puppetx::Bobtfish::Aw
     )
   end
 
-  read_only(:arn, :name, :policies) # can name even change?, can arn actually be set?
+  flushing_resource_methods :read_only => [
+    :arn,
+    :name
+  ]
 
   def policies=(newpolicies)
     @property_hash[:aws_item].policies.clear

@@ -23,8 +23,12 @@ Puppet::Type.type(:aws_cgw).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
     )
   end
 
-
-  read_only(:ip_address, :bgp_asn, :region, :type)
+  flushing_resource_methods :read_only => [
+    :ip_address,
+    :bgp_asn,
+    :region,
+    :type
+  ]
 
   def create
     begin

@@ -20,7 +20,11 @@ Puppet::Type.type(:aws_iam_user).provide(:api, :parent => Puppetx::Bobtfish::Aws
     )
   end
 
-  read_only(:arn, :path, :name)
+  flushing_resource_methods :read_only => [
+    :arn,
+    :path,
+    :name
+  ]
 
   def groups=(newgroups)
     groups_to_add = Set.new(newgroups).subtract(@property_hash[:groups]).to_a.map { |name| iam.groups[name] }

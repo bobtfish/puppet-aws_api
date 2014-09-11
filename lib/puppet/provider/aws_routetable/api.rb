@@ -31,7 +31,12 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppetx::Bobtfish::A
     )
   end
 
-  read_only(:vpc, :subnets, :routes, :main)
+  flushing_resource_methods :read_only => [
+    :vpc,
+    :subnets,
+    :routes,
+    :main
+  ]
 
   def create
     vpc = find_vpc_item_by_name resource[:vpc]

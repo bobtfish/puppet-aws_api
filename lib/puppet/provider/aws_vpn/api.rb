@@ -38,7 +38,9 @@ Puppet::Type.type(:aws_vpn).provide(:api, :parent => Puppetx::Bobtfish::Aws_api)
     )
   end
 
-  read_only(:region, :vgw, :cgw, :type, :routing, :static_routes)
+  flushing_resource_methods :read_only => [
+    :region, :vgw, :cgw, :type, :routing, :static_routes
+  ]
   def create
     begin
       cgw = regions.map do |region_name|
