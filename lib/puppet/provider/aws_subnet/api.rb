@@ -34,9 +34,6 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
     end.flatten
   end
   read_only(:vpc, :cidr, :az, :route_table)
-  def tags=(value)
-    fail "Set tags not implemented yet"
-  end
   def create
     vpc = find_vpc_item_by_name(resource[:vpc])
 
