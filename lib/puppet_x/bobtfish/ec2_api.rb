@@ -4,7 +4,7 @@ require 'puppet'
 module Puppet_X
   module Bobtfish
     class DieLikeThePigDogYouAre < Exception
-      alias :old_to_s, :to_s
+      alias_method :old_to_s, :to_s
       def to_s
         STDERR.puts "EMERGENCY BAIL OUT - probably due to amazon API errors in prefetch (are you over the limits?): #{old_to_s}"
         kill 15, $$
