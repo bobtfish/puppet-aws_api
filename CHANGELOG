@@ -1,3 +1,4 @@
+- Sort groups on aws_iam_user to reduce churn
 - Fix confinement to not try to load the provider unless aws-sdk is available
 
 2013-03-06 Release 0.0.2

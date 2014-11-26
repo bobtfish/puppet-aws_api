@@ -11,7 +11,7 @@ Puppet::Type.type(:aws_iam_user).provide(:api, :parent => Puppet_X::Bobtfish::Ec
       :id               => item.id,
       :arn              => item.arn,
       :path             => item.path,
-      :groups           => item.groups.map { |g| g.name },
+      :groups           => item.groups.map { |g| g.name }.sort,
       :ensure           => :present
     )
   end

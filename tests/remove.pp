@@ -25,10 +25,12 @@ aws_subnet { 'euwest1cdevc back tier subnet':
 aws_vpc { 'eu-west-1deveu':
   ensure           => 'absent',
   cidr             => '10.84.0.0/16',
-#  dhcp_options     => 'eu-west-1-dev',
+# dhcp_options     => 'eu-west-1-dev',
   instance_tenancy => 'default',
   region           => 'eu-west-1',
-  tags             => {'test' => 'tdoran'},
+  tags             => {
+    'test' => 'tdoran'
+  },
 }
 aws_igw { 'eu-west-1deveu':
   ensure => absent,
@@ -44,10 +46,10 @@ aws_vgw { 'eu-west-1deveu':
 } ->Aws_vpc['eu-west-1deveu']
 
 aws_vpn { 'eu-west-1deveu_vpn':
-  ensure     => absent,
-  vgw        => 'eu-west-1deveu',
-  cgw        => 'eu-west-1deveu_6000',
-  type       => 'ipsec.1',
+  ensure => absent,
+  vgw    => 'eu-west-1deveu',
+  cgw    => 'eu-west-1deveu_6000',
+  type   => 'ipsec.1',
 } -> Aws_cgw['eu-west-1deveu_6000']
 Aws_vpn['eu-west-1deveu_vpn']
 ->
