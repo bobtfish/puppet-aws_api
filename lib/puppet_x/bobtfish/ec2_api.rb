@@ -3,6 +3,13 @@ require 'puppet'
 
 module Puppet_X
   module Bobtfish
+    class DieLikeThePigDogYouAre < Exception
+      alias_method :old_to_s, :to_s
+      def to_s
+        STDERR.puts "EMERGENCY BAIL OUT - probably due to amazon API errors in prefetch (are you over the limits?): #{old_to_s}"
+        kill 15, $$
+      end
+    end
   end
 end
 
@@ -19,17 +26,22 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def self.prefetch(resources)
-    all_instances = if method(:instances).arity > 0
-      # This is so hacky, I am so sorry
-      instances(resources)
-    else
-      instances
-    end
-    all_instances.each do |provider|
-      if resource = resources[provider.name] then
-        resource.provider = provider
+    begin
+      all_instances = if method(:instances).arity > 0
+        # This is so hacky, I am so sorry
+        instances(resources)
+      else
+        instances
       end
+      all_instances.each do |provider|
+        if resource = resources[provider.name] then
+          resource.provider = provider
+        end
+      end
+    rescue Exception => e
+      raise Puppet_X::Bobtfish::DieLikeThePigDogYouAre(e.to_s)
     end
+
   end
 
   def lookup(type, name)
