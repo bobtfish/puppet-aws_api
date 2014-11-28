@@ -2,7 +2,7 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 
 Puppet::Type.type(:aws_ec2_instance).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
-
+  remove_method :tags= # We want the method inherited from the parent
   def self.instances_for_region(region)
     ec2.regions[region].instances
   end
