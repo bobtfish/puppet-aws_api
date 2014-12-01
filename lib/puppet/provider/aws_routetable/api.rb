@@ -24,7 +24,8 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
           :origin => route.origin,
           :network_interface => name_or_id(route.network_interface),
           :internet_gateway => name_or_id(route.internet_gateway)
-        }.reject { |k, v| v.nil? } }
+        }.reject { |k, v| v.nil? } },
+      :propagate_routes_from => [],
     )
   end
   read_only(:vpc, :subnets, :routes, :main)

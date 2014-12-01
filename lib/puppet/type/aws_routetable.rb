@@ -10,5 +10,6 @@ Puppet::Type.newtype(:aws_routetable) do
     newvalue 'false'
   end
   newproperty(:tags)
+  newproperty(:propagate_routes_from)
 end
 
