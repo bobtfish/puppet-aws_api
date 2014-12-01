@@ -57,5 +57,13 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
     @property_hash[:aws_item].delete
     @property_hash[:ensure] = :absent
   end
+
+  def propagate_routes_from=(vgws)
+    Array(vgws).each do |vgw|
+      ec2.regions[my_region].enable_vgw_route_propagation(
+        :route_table_id => id,
+        :gateway_id     => vgw
+      )
+  end
 end
 
