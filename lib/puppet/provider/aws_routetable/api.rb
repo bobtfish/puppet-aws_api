@@ -64,6 +64,7 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
         :route_table_id => id,
         :gateway_id     => vgw
       )
+    end
   end
 end
 
