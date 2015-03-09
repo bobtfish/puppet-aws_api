@@ -56,7 +56,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     tags = resource[:tags] || {}
     tags.each { |k,v| vpc.add_tag(k, :value => v) }
     # Tag-name the default SG for this VPC so we know we're managing it:
-    vpc.security_groups.find{|sg| sg.name == 'default'}.tags['Name'] = 'default'
+    vpc.security_groups.find{|sg| sg.name == 'default'}.tags['Name'] = resource[:name]
 
     if dhopts_name
       vpc.dhcp_options = dhopts_name

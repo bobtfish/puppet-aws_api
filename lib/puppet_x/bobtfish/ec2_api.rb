@@ -2,19 +2,19 @@ require 'rubygems'
 require 'puppet'
 
 module Puppet_X
-  module Bobtfish
-    class DieLikeThePigDogYouAre < Exception
-      alias_method :old_to_s, :to_s
-      def to_s
-        STDERR.puts "EMERGENCY BAIL OUT - probably due to amazon API errors in prefetch (are you over the limits?): #{old_to_s}"
-        kill 15, $$
-      end
-    end
+module Bobtfish
+class Ec2_api < Puppet::Provider
+  HAVE_AWS_SDK = begin
+    require 'aws-sdk'
+    #AWS.config(
+    #  :logger        => Logger.new($stdout),
+    #  :log_formatter => AWS::Core::LogFormatter.colored,
+    #  :log_level     => :debug)
+    true
+  rescue LoadError
+    STDERR.puts "Coudln't load AWS SDK gem"
+    false
   end
-end
-
-class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
-  HAVE_AWS_SDK = begin; require 'aws-sdk'; true; rescue Exception; false; end
 
   confine :true => HAVE_AWS_SDK
 
@@ -26,22 +26,16 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
   end
 
   def self.prefetch(resources)
-    begin
-      all_instances = if method(:instances).arity > 0
-        # This is so hacky, I am so sorry
-        instances(resources)
-      else
-        instances
+    instances.each do |provider|
+      if resource = resources[provider.name]
+        resource.provider = provider
       end
-      all_instances.each do |provider|
-        if resource = resources[provider.name] then
-          resource.provider = provider
-        end
-      end
-    rescue Exception => e
-      raise Puppet_X::Bobtfish::DieLikeThePigDogYouAre(e.to_s)
     end
-
+  rescue Exception => e
+    STDERR.puts "EMERGENCY BAIL OUT"
+    STDERR.puts "probably due to amazon API errors in prefetch (are you over the limits?)"
+    STDERR.puts e.to_s
+    Kernel.exit 1
   end
 
   def lookup(type, name)
@@ -236,7 +230,6 @@ class Puppet_X::Bobtfish::Ec2_api < Puppet::Provider
     @property_hash[:aws_item].attach(vpc)
     @property_hash[:vpc] = vpc_name
   end
-
-
 end
-
+end # module Bobtfish
+end # module Puppet_X
