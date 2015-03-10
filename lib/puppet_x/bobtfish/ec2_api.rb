@@ -6,7 +6,7 @@ module Bobtfish
 class Ec2_api < Puppet::Provider
   HAVE_AWS_SDK = begin
     require 'aws-sdk'
-    #AWS.config(
+    # AWS.config(
     #  :logger        => Logger.new($stdout),
     #  :log_formatter => AWS::Core::LogFormatter.colored,
     #  :log_level     => :debug)
@@ -156,7 +156,7 @@ class Ec2_api < Puppet::Provider
   end
 
   def tags=(newtags)
-    newtags.each { |k,v| @property_hash[:aws_item].add_tag(k, :value => v) }
+    @property_hash[:aws_item].tags.set(newtags)
     @property_hash[:tags] = newtags
   end
 

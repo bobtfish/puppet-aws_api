@@ -3,21 +3,21 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
   remove_method :tags= # We want the method inherited from the parent
+  read_only :cidr, :id, :region, :instance_tenancy # can't set ID can we?
 
-  def self.vpcs_for_region(region)
-    ec2.regions[region].vpcs
+  def dhcp_options=(value)
+    dopts = find_dhopts_item_by_name(value)
+    fail("Could not find dhcp options named '#{value}'") unless dopts
+    @property_hash[:aws_item].dhcp_options = dopts.id
+    @property_hash[:dhcp_options] = value
   end
-  def vpcs_for_region(region)
-    self.class.vpcs_for_region region
-  end
+
   def self.new_from_aws(region_name, item)
     tags = item.tags.to_h
     name = tags.delete('Name') || item.id
-    dopts_item = find_dhopts_item_by_name item.dhcp_options_id
-    dopts_name = nil
-    if dopts_item
-      dopts_name = name_or_id dopts_item
-    end
+    dopts_item = find_dhopts_item_by_name(item.dhcp_options_id)
+    dopts_name = name_or_id(dopts_item) if dopts_item
+
     new(
       :aws_item         => item,
       :name             => name,
@@ -27,47 +27,38 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :dhcp_options     => dopts_name,
       :instance_tenancy => item.instance_tenancy.to_s,
       :region           => region_name,
-      :tags             => tags
-    )
+      :tags             => tags)
   end
+
   def self.instances
-    regions.collect do |region_name|
-      vpcs_for_region(region_name).collect { |item| new_from_aws(region_name, item) }
+    regions.map do |region_name|
+      vpcs_for_region(region_name).map { |item| new_from_aws(region_name, item) }
     end.flatten
   end
-  read_only(:cidr, :id,  :region, :aws_dops, :instance_tenancy) # can't set ID can we?
-  def dhcp_options=(value)
-    dopts = find_dhopts_item_by_name(value)
-    fail("Could not find dhcp options named '#{value}'") unless dopts
-    @property_hash[:aws_item].dhcp_options = dopts.id
-    @property_hash[:dhcp_options] = value
-  end
+
   def create
-    dhopts_name = nil
-    if resource[:dhcp_options]
-      dhopts = find_dhopts_item_by_name(resource[:dhcp_options])
-      fail("Cannot find dhcp options named '#{resource[:dhcp_options]}'") unless dhopts
-      dhopts_name = dhopts.id
-    end
+    fail("CIDR must be provided") unless resource[:cidr]
 
     vpc = ec2.regions[resource[:region]].vpcs.create(resource[:cidr])
     wait_until_state vpc, :available
-    tag_with_name vpc, resource[:name]
-    tags = resource[:tags] || {}
-    tags.each { |k,v| vpc.add_tag(k, :value => v) }
-    # Tag-name the default SG for this VPC so we know we're managing it:
-    vpc.security_groups.find{|sg| sg.name == 'default'}.tags['Name'] = resource[:name]
 
-    if dhopts_name
-      vpc.dhcp_options = dhopts_name
+    vpc.tags.set((resource[:tags] || {}).merge({'Name' => resource[:name]}))
+    vpc.security_groups.first.tags['Name'] = resource[:name]
+
+    if resource[:dhcp_options]
+      dhopts = find_dhopts_item_by_name(resource[:dhcp_options])
+      fail("Cannot find dhcp options named '#{resource[:dhcp_options]}'") unless dhopts
+      vpc.dhcp_options = dhopts.id
     end
-    vpc
 
+    vpc
   end
+
   def destroy
     @property_hash[:aws_item].delete
     @property_hash[:ensure] = :absent
   end
+
   def purge
     vpc = @property_hash[:aws_item]
     subnets = vpc.subnets
@@ -76,6 +67,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     regions = subnets.collect do |sn|
       sn.availability_zone.region_name
     end
+
     regions.each do |region|
       elb(region).load_balancers.each do |lb|
         if lb.subnets.all?{|sn| subnets.include?(sn)}
@@ -85,6 +77,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
         end
       end
     end
+
     # Freeze the current set
     instances = vpc.instances.to_a
 
@@ -93,6 +86,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       debug "Stopping instance #{node.tags['Name']}"
       node.stop
     end
+
     instances.each do |node|
       wait_until_status(node, :stopped)
       # Dispose of EIPs
@@ -129,8 +123,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     end
 
     # Gateways
-    igw = vpc.internet_gateway
-    if igw
+    if igw = vpc.internet_gateway
       debug "Detach Internet Gateway: #{igw.tags['Name']}"
       igw.detach(vpc)
       debug "Disposing of #{igw.tags['Name']}"
@@ -151,7 +144,18 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     # Finally, the VPC itself
     debug "Purging VPC #{vpc.tags['Name']}"
     vpc.delete
+
+    AWS.reset_memoization
     @property_hash[:ensure] = :purged
   end
-end
 
+private
+
+  def self.vpcs_for_region(region)
+    ec2.regions[region].vpcs
+  end
+
+  def vpcs_for_region(region)
+    self.class.vpcs_for_region region
+  end
+end

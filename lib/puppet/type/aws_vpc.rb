@@ -18,4 +18,3 @@ Puppet::Type.newtype(:aws_vpc) do
   newproperty(:instance_tenancy)
   newproperty(:tags)
 end
-

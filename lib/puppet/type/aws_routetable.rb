@@ -10,6 +10,6 @@ Puppet::Type.newtype(:aws_routetable) do
     newvalue 'false'
   end
   newproperty(:tags)
-  newproperty(:propagate_to)
+  newproperty(:propagate_from, :array_matching => :all)
 end
 
