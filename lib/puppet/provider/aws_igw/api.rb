@@ -4,13 +4,13 @@ Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   mk_resource_methods
   remove_method :tags= # We want the method inherited from the parent
 
-  def self.new_from_aws(item)
-    tags = item.tags.to_h
+  def self.new_from_aws(region_name, item, tags=nil)
+    tags ||= item.tags.to_h
     name = tags.delete('Name') || item.id
-    vpc_name = nil
-    if item.vpc
-      vpc_name = name_or_id item.vpc
-    end
+
+    vpc_id   = item.pre_attachment_set.map{|as| as[:vpc_id]}.first
+    vpc_name = name_or_id(find_vpc_item_by_name(name)) if vpc_id
+
     new(
       :aws_item         => item,
       :name             => name,
@@ -20,11 +20,8 @@ Puppet::Type.type(:aws_igw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :tags             => tags
     )
   end
-  def self.instances
-    regions.collect do |region_name|
-      ec2.regions[region_name].internet_gateways.collect { |item| new_from_aws(item) }
-    end.flatten
-  end
+
+  def self.instances_class; AWS::EC2::InternetGateway; end
 
   read_only(:vpc)
 

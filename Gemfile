@@ -1,7 +1,7 @@
 source "http://rubygems.org"
 
 gem 'nokogiri', '~> 1.5.11'
-gem 'aws-sdk'
+gem 'aws-sdk', '1.55.0'
 
 group :test do
   gem "rake"

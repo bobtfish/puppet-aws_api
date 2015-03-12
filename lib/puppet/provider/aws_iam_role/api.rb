@@ -24,12 +24,12 @@ Puppet::Type.type(:aws_iam_role).provide(:api, :parent => Puppet_X::Bobtfish::Ec
   end
 
   def service_principal=(service)
-    assume_role_policy_document ||= service_template(service)
+    assume_role_policy_document ||= service_tempalte(service)
     assume_role_policy_document['Statement']['Principal']['Service'] = service
   end
 
   def create
-    resource[:assume_role_policy_document] ||= service_template(resource[:service_principal])
+    resource[:assume_role_policy_document] ||= service_tempalte(resource[:service_principal])
     iam.client.create_role(
       :role_name => resource[:name],
       :assume_role_policy_document => JSON.dump(resource[:assume_role_policy_document]),
@@ -58,7 +58,7 @@ Puppet::Type.type(:aws_iam_role).provide(:api, :parent => Puppet_X::Bobtfish::Ec
 
   private
 
-  def service_template(service)
+  def service_tempalte(service)
     return {'Statement' => [
       {
         'Action' => 'sts:AssumeRole',

@@ -3,8 +3,9 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
   remove_method :tags= # We want the method inherited from the parent
-  def self.new_from_aws(region_name, item)
-    tags = item.tags.to_h
+
+  def self.new_from_aws(region_name, item, tags=nil)
+    tags ||= item.tags.to_h
     name = tags.delete('Name') || item.id
     c = item.configuration
     new(
@@ -21,11 +22,8 @@ Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_a
       :netbios_node_type    => c[:netbios_node_type].to_s
     )
   end
-  def self.instances
-    regions.collect do |region_name|
-      ec2.regions[region_name].dhcp_options.collect { |item| new_from_aws(region_name,item) }
-    end.flatten
-  end
+
+  def self.instances_class; AWS::EC2::DHCPOptions; end
 
   read_only(:domain_name, :ntp_servers, :netbios_name_servers, :netbios_node_type)
 
