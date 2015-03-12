@@ -37,7 +37,7 @@ class Ec2_api < Puppet::Provider
 
       item_set.map do |item_attrs|
         item = preload(region, item_attrs, describe_call, id_call)
-        name = [region_name, item.tags['Name']].join('/')
+        name = [region_name, item.tags['Name'] || item.id].join('/')
 
         raise "#{item} : #{name} is a duplicate" if @instance_names.include? name
         @instance_names << name
