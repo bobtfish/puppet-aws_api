@@ -67,4 +67,3 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
     @property_hash[:ensure] = :absent
   end
 end
-

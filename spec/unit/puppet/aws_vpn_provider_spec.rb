@@ -26,14 +26,5 @@ describe provider_class do
       provider_class.should_receive(:ec2).at_least(:once).and_return(ec2_mock)
       provider_class.instances.count.should eq(4)
     end
-    it "should send a key hash to the ec2 method" do
-      expect(provider_class).to receive(:ec2) do
-        ec2_mock
-      end.at_least(:once)
-      provider_class.instances.count.should eq(4)
-    end
   end
-
-
 end
-

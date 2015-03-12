@@ -26,31 +26,23 @@ class Ec2_api < Puppet::Provider
   end
 
   def self.instances
+    describe_call = instances_class.send :describe_call_name
+    set_call      = :"#{instances_class.send :inflected_name}_set"
+    id_call       = :"#{instances_class.send :inflected_name}_id"
+
     @instance_names ||= []
-    @instances ||= regions.map do |region_name|
-      region        = ec2.regions[region_name]
-      describe_call = instances_class.send :describe_call_name
-      set_call      = :"#{instances_class.send :inflected_name}_set"
-      id_call       = :"#{instances_class.send :inflected_name}_id"
-      item_set      = region.client.send(describe_call).send(set_call)
+    @instances      ||= regions.map do |region_name|
+      region   = ec2.regions[region_name]
+      item_set = region.client.send(describe_call).send(set_call)
 
       item_set.map do |item_attrs|
-        item = instances_class.new_from(
-          describe_call, item_attrs, item_attrs.send(id_call), :config => region.config)
-
-        item_attrs.keys.each {|k| item.define_singleton_method(:"pre_#{k}") { item_attrs[k] } }
-
-        original_tags = item.tags
-        item.define_singleton_method(:set_tags) {|tags| original_tags.set(tags) }
-
-        item_tags = item.pre_tag_set.inject({}) {|tags, tag| tags.merge!(tag[:key] => tag[:value]) }
-        item.define_singleton_method(:tags) { item_tags }
-
+        item = preload(region, item_attrs, describe_call, id_call)
         name = [region_name, item.tags['Name']].join('/')
+
         raise "#{item} : #{name} is a duplicate" if @instance_names.include? name
         @instance_names << name
 
-        new_from_aws(region_name, item, item_tags.clone)
+        new_from_aws(region_name, item, item.tags.clone)
       end
     end.flatten.compact.sort_by{|i| i.aws_item.id}
   rescue Exception => e
@@ -59,6 +51,21 @@ class Ec2_api < Puppet::Provider
     STDERR.puts e.to_s
     STDERR.puts e.backtrace[0..5]
     Kernel.exit 1
+  end
+
+  def self.preload(region, item_attrs, describe_call, id_call)
+    item = instances_class.new_from(
+      describe_call, item_attrs, item_attrs.send(id_call), :config => region.config)
+
+    item_attrs.keys.each {|k| item.define_singleton_method(:"pre_#{k}") { item_attrs[k] } }
+
+    original_tags = item.tags
+    item.define_singleton_method(:set_tags) {|tags| original_tags.set(tags) }
+
+    item_tags = item.pre_tag_set.inject({}) {|tags, tag| tags.merge!(tag[:key] => tag[:value]) }
+    item.define_singleton_method(:tags) { item_tags }
+
+    item
   end
 
   def self.prefetch(resources)
