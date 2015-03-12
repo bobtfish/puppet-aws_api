@@ -5,14 +5,8 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
   mk_resource_methods
   remove_method :tags= # We want the method inherited from the parent
 
-  def self.instances_for_region(region)
-    ec2.regions[region].security_groups
-  end
-  def instances_for_region(region)
-    self.class.instances_for_region region
-  end
-  def self.new_from_aws(region_name, item)
-    tags = item.tags.to_h
+  def self.new_from_aws(region_name, item, tags=nil)
+    tags ||= item.tags.to_h
     name = tags.delete('Name') || item.id
     if item.vpc_id
       vpc = ec2.regions[region_name].vpcs[item.vpc_id].tags['Name']
@@ -48,11 +42,8 @@ Puppet::Type.type(:aws_security_group).provide(:api, :parent => Puppet_X::Bobtfi
       :authorize_egress  => egress
     )
   end
-  def self.instances
-    regions.collect do |region_name|
-      instances_for_region(region_name).collect { |item| new_from_aws(region_name, item) }
-    end.flatten
-  end
+
+  def self.instances_class; AWS::EC2::SecurityGroup; end
 
   read_only(:description, :vpc, :authorize_ingress, :authorize_egress)
 

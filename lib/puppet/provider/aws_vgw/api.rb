@@ -4,8 +4,8 @@ Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   mk_resource_methods
   remove_method :tags= # We want the method inherited from the parent
 
-  def self.new_from_aws(item, region_name)
-    tags = item.tags.to_h
+  def self.new_from_aws(region_name, item, tags=nil)
+    tags ||= item.tags.to_h
     name = tags.delete('Name') || item.id
     vpc_name = nil
     if item.vpc
@@ -21,11 +21,8 @@ Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :region_name      => region_name
     )
   end
-  def self.instances
-    regions.collect do |region_name|
-      ec2.regions[region_name].vpn_gateways.reject { |item| item.state == :deleting or item.state == :deleted }.collect { |item| new_from_aws(item, region_name) }
-    end.flatten
-  end
+
+  def self.instances_class; AWS::EC2::VPNGateway; end
 
   read_only(:region, :vpn_type, :region_name, :availability_zone)
 

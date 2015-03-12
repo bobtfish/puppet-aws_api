@@ -19,17 +19,20 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
     propagate_from!([value].flatten, @property_hash[:aws_item])
   end
 
-  def self.new_from_aws(region_name, item)
-    debug "#{self.inspect} #new_from_aws"
-    tags = item.tags.to_h
+  def self.new_from_aws(region_name, item, tags=nil)
+    tags ||= item.tags.to_h
     name = tags.delete('Name') || item.id
 
-    # lol this API
-    route_table_attrs = item.send(:describe_call)[:route_table_set][0]
-    gw_ids   = route_table_attrs[:propagating_vgw_set].map{|pvs| pvs[:gateway_id]}
-    gw_names = ec2.regions[region_name].vpn_gateways.
-      inject({}) {|h,vgw| h.merge!(vgw.id => vgw.tags['Name'] || vgw.id) }.
-      values_at(*gw_ids)
+    cached_assocs = item.pre_association_set.map do |assoc|
+      AWS::EC2::RouteTable::Association.new(item,
+        assoc[:route_table_association_id],
+        assoc[:subnet_id])
+    end
+    item.define_singleton_method(:associations) { cached_assocs }
+
+    gw_ids   = item.pre_propagating_vgw_set.map{|pvs| pvs[:gateway_id]}
+    gw_names = Puppet::Type.type(:aws_vgw).provider(:api).instances.
+      select{|vgw| gw_ids.include? vgw.aws_item.id }.map{|vgw| vgw.name}
 
     new(
       :aws_item         => item,
@@ -37,26 +40,27 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
       :id               => item.id,
       :ensure           => :present,
       :tags             => tags,
-      :main             => item.main? ? 'true' : 'false',
-      :vpc              => name_or_id(item.vpc),
+      :main             => item.pre_association_set.find{|a| a[:main] } ? 'true' : 'false',
+      :vpc              => name_or_id(find_vpc_item_by_name(item.pre_vpc_id)),
       :subnets          => item.subnets.map { |subnet| subnet.tags.to_h['Name'] || subnet.id },
-      :routes           => item.routes.map do |route|
+      :routes           => item.pre_route_set.map do |route_details|
+        route = AWS::EC2::RouteTable::Route.new(item, route_details)
+        igw   = Puppet::Type.type(:aws_igw).provider(:api).instances.
+          find {|igw| igw.aws_item.id == route.internet_gateway.id} if route.internet_gateway
+        igw   = igw.aws_item if igw
+
         { :destination_cidr_block => route.destination_cidr_block,
           :state => route.state,
-          :target => name_or_id(route.target),
+          :target => route.target.id == 'local' ? 'local' : name_or_id(route.target),
           :origin => route.origin,
           :network_interface => name_or_id(route.network_interface),
-          :internet_gateway => name_or_id(route.internet_gateway) }.
+          :internet_gateway => name_or_id(igw) }.
             reject { |k,v| v.nil? }
       end,
       :propagate_from => gw_names)
   end
 
-  def self.instances
-    regions.collect do |region_name|
-      ec2.regions[region_name].route_tables.collect { |item| new_from_aws(region_name,item) }
-    end.flatten
-  end
+  def self.instances_class; AWS::EC2::RouteTable; end
 
   def exists?
     @property_hash[:ensure] == :present
@@ -72,6 +76,8 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
 
     set_as_main!(vpc, route_table) if resource[:main].to_s == 'true'
     propagate_from!([resource[:propagate_from]].flatten, route_table) if resource[:propagate_from]
+
+    self.class.instance_variable_set('@instances', nil)
 
     route_table
   rescue Exception => e

@@ -17,38 +17,25 @@ end
 Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
   remove_method :tags= # We want the method inherited from the parent
+  read_only(:vpc, :cidr, :az, :route_table)
 
-  def self.vpcs_for_region(region)
-    ec2.regions[region].vpcs
-  end
-  def vpcs_for_region(region)
-    self.class.vpcs_for_region region
-  end
-  def self.new_from_aws(vpc_id, item)
-    tags = item.tags.to_h
+  def self.new_from_aws(region_name, item, tags=nil)
+    tags ||= item.tags.to_h
     name = tags.delete('Name') || item.id
+
     new(
       :aws_item => item,
       :name     => name,
       :id       => item.id,
       :ensure   => :present,
-      :vpc      => vpc_id,
+      :vpc      => name_or_id(find_vpc_item_by_name(item.pre_vpc_id)),
       :cidr     => item.cidr_block,
       :az       => item.availability_zone_name,
-      :tags     => tags.to_hash
-    )
+      :tags     => tags)
   end
-  def self.instances
-    regions.collect do |region_name|
-      vpcs_for_region(region_name).collect do |vpc|
-        vpc_name = name_or_id vpc
-        vpc.subnets.collect do |item|
-          new_from_aws(vpc_name, item)
-        end
-      end.flatten
-    end.flatten
-  end
-  read_only(:vpc, :cidr, :az, :route_table)
+
+  def self.instances_class; AWS::EC2::Subnet; end
+
   def create
     vpc = find_vpc_item_by_name(resource[:vpc])
 
@@ -73,8 +60,8 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
     tags = resource[:tags] || {}
     tags.each { |k,v| subnet.add_tag(k, :value => v) }
     subnet
-
   end
+
   def destroy
     @property_hash[:aws_item].delete
     @property_hash[:ensure] = :absent

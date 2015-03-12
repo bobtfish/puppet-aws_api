@@ -6,10 +6,10 @@ module Bobtfish
 class Ec2_api < Puppet::Provider
   HAVE_AWS_SDK = begin
     require 'aws-sdk'
-    # AWS.config(
-    #  :logger        => Logger.new($stdout),
-    #  :log_formatter => AWS::Core::LogFormatter.colored,
-    #  :log_level     => :debug)
+    AWS.config(
+     :logger        => Logger.new($stdout),
+     :log_formatter => AWS::Core::LogFormatter.colored,
+     :log_level     => :debug) if ENV['AWS_DEBUG'] == '1'
     true
   rescue LoadError
     STDERR.puts "Coudln't load AWS SDK gem"
@@ -21,8 +21,44 @@ class Ec2_api < Puppet::Provider
   desc "Helper for Providers which use the EC2 API"
   self.initvars
 
+  def self.instances_class
+    raise "#instances_method not implemented"
+  end
+
   def self.instances
-    raise NotImplementedError
+    @instance_names ||= []
+    @instances ||= regions.map do |region_name|
+      region        = ec2.regions[region_name]
+      describe_call = instances_class.send :describe_call_name
+      set_call      = :"#{instances_class.send :inflected_name}_set"
+      id_call       = :"#{instances_class.send :inflected_name}_id"
+      item_set      = region.client.send(describe_call).send(set_call)
+
+      item_set.map do |item_attrs|
+        item = instances_class.new_from(
+          describe_call, item_attrs, item_attrs.send(id_call), :config => region.config)
+
+        item_attrs.keys.each {|k| item.define_singleton_method(:"pre_#{k}") { item_attrs[k] } }
+
+        original_tags = item.tags
+        item.define_singleton_method(:set_tags) {|tags| original_tags.set(tags) }
+
+        item_tags = item.pre_tag_set.inject({}) {|tags, tag| tags.merge!(tag[:key] => tag[:value]) }
+        item.define_singleton_method(:tags) { item_tags }
+
+        name = [region_name, item.tags['Name']].join('/')
+        raise "#{item} : #{name} is a duplicate" if @instance_names.include? name
+        @instance_names << name
+
+        new_from_aws(region_name, item, item_tags.clone)
+      end
+    end.flatten.compact.sort_by{|i| i.aws_item.id}
+  rescue Exception => e
+    STDERR.puts "EMERGENCY BAIL OUT"
+    STDERR.puts "probably due to amazon API errors in prefetch (are you over the limits?)"
+    STDERR.puts e.to_s
+    STDERR.puts e.backtrace[0..5]
+    Kernel.exit 1
   end
 
   def self.prefetch(resources)
@@ -35,6 +71,7 @@ class Ec2_api < Puppet::Provider
     STDERR.puts "EMERGENCY BAIL OUT"
     STDERR.puts "probably due to amazon API errors in prefetch (are you over the limits?)"
     STDERR.puts e.to_s
+    STDERR.puts e.backtrace[0..5]
     Kernel.exit 1
   end
 
@@ -85,119 +122,63 @@ class Ec2_api < Puppet::Provider
   end
 
   def self.default_creds
-    {
-      :access_key_id => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']),
-      :secret_access_key => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY'])
-    }
+    { :access_key_id => (ENV['AWS_ACCESS_KEY_ID']||ENV['AWS_ACCESS_KEY']),
+      :secret_access_key => (ENV['AWS_SECRET_ACCESS_KEY']||ENV['AWS_SECRET_KEY']) }
   end
 
-  def self.amazon_thing(which)
-    which.new
-  end
+  def self.amazon_thing(which); which.new; end
 
-  def self.iam()
-    amazon_thing(AWS::IAM)
-  end
-  def iam
-    self.class.iam()
-  end
+  def self.iam; @@iam ||= AWS::IAM.new; end
+  def iam; self.class.iam; end
 
-  def self.ec2()
-    amazon_thing(AWS::EC2)
-  end
-  def ec2()
-    self.class.ec2()
-  end
+  def self.ec2; @@ec2 ||= AWS::EC2.new; end
+  def ec2; self.class.ec2; end
 
-  def self.r53
-    amazon_thing(AWS::Route53)
-  end
+  def self.r53; @@r53 ||= AWS::Route53.new; end
+  def r53; self.class.r53; end
 
-  def r53
-    self.class.r53
-  end
+  def self.elb(region=nil); (@@elb ||= {})[region] ||= AWS::ELB.new(:region => region); end
+  def elb(region=nil); self.class.elb(region); end
 
-  def self.elb(region = None)
-    AWS::ELB.new(:region => region)
-  end
+  def self.rds(region=nil); (@@rds ||= {})[region] ||= AWS::RDS.new(:region => region); end
+  def rds(region=nil); self.class.rds(region); end
 
-  def elb(region=None)
-    self.class.elb(region)
-  end
-
-  def self.rds(region=None)
-    AWS::RDS.new(:region => region)
-  end
-  def rds(region=None)
-    self.class.rds(region)
-  end
-
-  def self.elcc(region=None)
-    AWS::ElastiCache.new(:region => region)
-  end
-  def elcc(region=None)
-    self.class.elcc(region)
-  end
+  def self.elcc(region=nil); (@@elcc ||= {})[region] ||= AWS::ElastiCache.new(:region => region); end
+  def elcc(region=nil); self.class.elcc(region); end
 
   def self.regions
-    @@regions ||= begin
-      if ENV['AWS_REGION'] and not ENV['AWS_REGION'].empty?
-        [ENV['AWS_REGION']]
-      elsif HAVE_AWS_SDK
-        ec2.regions.collect { |r| r.name }
-      else
-        []
-      end
+    @@regions ||=  if ENV['AWS_REGION'] and not ENV['AWS_REGION'].empty?
+      [ENV['AWS_REGION']]
+    elsif HAVE_AWS_SDK
+      ec2.regions.collect { |r| r.name }
+    else
+      []
     end
   end
 
   def regions
-    self.class.regions()
+    self.class.regions
   end
 
   def tags=(newtags)
-    @property_hash[:aws_item].tags.set(newtags)
+    @property_hash[:aws_item].set_tags(newtags)
     @property_hash[:tags] = newtags
   end
 
-  def self.find_dhopts_item_by_name(name)
-    @@dhoptions ||= begin
-      regions.collect do |region_name|
-        ec2.regions[region_name].dhcp_options.to_a
-      end.flatten
-    end
-    @@dhoptions.find do |dopt|
-      dopt_name = dopt.tags.to_h['Name'] || dopt.id
-      dopt_name == name || dopt.id == name
-    end
-  end
-
-  def find_dhopts_item_by_name(name)
-    self.class.find_dhopts_item_by_name(name)
-  end
-
   def find_vpc_item_by_name(name)
-    @@vpcs ||= begin
-      regions.collect do |region_name|
-        ec2.regions[region_name].vpcs.to_a
-      end.flatten
-    end
-    @@vpcs.find do |vpc|
-      vpc_name = vpc.tags.to_h['Name'] || vpc.vpc_id
-      vpc_name == name
-    end
+    self.class.find_vpc_item_by_name(name)
+  end
+  def self.find_vpc_item_by_name(name)
+    res = Puppet::Type.type(:aws_vpc).provider(:api).instances.
+      find {|vpc| vpc.name == name || vpc.aws_item.id == name}
+    res.aws_item if res
   end
 
   def find_region_name_for_vpc_name(name)
     self.class.find_region_name_for_vpc_name(name)
   end
   def self.find_region_name_for_vpc_name(name)
-    regions.find do |region_name|
-      ec2.regions[region_name].vpcs.find do |vpc|
-        vpc_name = vpc.tags.to_h['Name'] || vpc.vpc_id
-        vpc_name == name
-      end
-    end
+    find_vpc_item_by_name(name).client.instance_variable_get('@region')
   end
 
   def self.find_hosted_zone_by_name(name)

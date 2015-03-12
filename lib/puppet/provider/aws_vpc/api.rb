@@ -5,18 +5,26 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   remove_method :tags= # We want the method inherited from the parent
   read_only :cidr, :id, :region, :instance_tenancy # can't set ID can we?
 
+  def self.find_dopt(name_or_id)
+    Puppet::Type.type(:aws_dopts).instances.find do |dopt|
+      dopt.provider.name          == name_or_id ||
+      dopt.provider.aws_item.id   == name_or_id
+    end
+  end
+  def find_dopt(name_or_id); self.class.find_dopt(name_or_id); end
+
   def dhcp_options=(value)
-    dopts = find_dhopts_item_by_name(value)
+    dopts = find_dopt(value)
     fail("Could not find dhcp options named '#{value}'") unless dopts
-    @property_hash[:aws_item].dhcp_options = dopts.id
+    @property_hash[:aws_item].dhcp_options = dopts.provider.aws_item
     @property_hash[:dhcp_options] = value
   end
 
-  def self.new_from_aws(region_name, item)
-    tags = item.tags.to_h
+  def self.new_from_aws(region_name, item, tags=nil)
+    tags ||= item.tags.to_h
     name = tags.delete('Name') || item.id
-    dopts_item = find_dhopts_item_by_name(item.dhcp_options_id)
-    dopts_name = name_or_id(dopts_item) if dopts_item
+    dopts_item = find_dopt(item.pre_dhcp_options_id)
+    dopts_name = dopts_item.title if dopts_item
 
     new(
       :aws_item         => item,
@@ -30,11 +38,7 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
       :tags             => tags)
   end
 
-  def self.instances
-    regions.map do |region_name|
-      vpcs_for_region(region_name).map { |item| new_from_aws(region_name, item) }
-    end.flatten
-  end
+  def self.instances_class; AWS::EC2::VPC; end
 
   def create
     fail("CIDR must be provided") unless resource[:cidr]
@@ -46,10 +50,12 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     vpc.security_groups.first.tags['Name'] = resource[:name]
 
     if resource[:dhcp_options]
-      dhopts = find_dhopts_item_by_name(resource[:dhcp_options])
+      dhopts = find_dopt(resource[:dhcp_options])
       fail("Cannot find dhcp options named '#{resource[:dhcp_options]}'") unless dhopts
-      vpc.dhcp_options = dhopts.id
+      vpc.dhcp_options = dhopts
     end
+
+    self.class.instance_variable_set('@instances', nil)
 
     vpc
   end
