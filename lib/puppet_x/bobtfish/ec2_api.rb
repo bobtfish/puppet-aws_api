@@ -168,7 +168,8 @@ class Ec2_api < Puppet::Provider
   end
 
   def tags=(newtags)
-    @property_hash[:aws_item].set_tags(newtags)
+    string_values= newtags.inject({}){|h,(k,v)| h.merge!(k => v.to_s)}
+    @property_hash[:aws_item].set_tags(string_values)
     @property_hash[:tags] = newtags
   end
 
