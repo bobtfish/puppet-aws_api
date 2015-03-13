@@ -20,7 +20,8 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
   read_only(:vpc, :cidr, :az, :route_table)
 
   def self.new_from_aws(region_name, item, tags=nil)
-    tags ||= item.tags.to_h
+    tags ||= item.tags
+    tags = tags.to_h if tags
     name = tags.delete('Name') || item.id
 
     new(
