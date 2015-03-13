@@ -68,7 +68,7 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
 
   def create
     vpc = find_vpc_item_by_name resource[:vpc]
-    fail("Could not find vpc #{resource[:vpc]}") unless vpc
+    raise "Could not find vpc #{resource[:vpc]}" unless vpc
 
     route_table = current_region.route_tables.create(:vpc => vpc.id)
     tags = (resource[:tags] || {}).merge('Name' => resource[:name])
@@ -77,8 +77,7 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
     set_as_main!(vpc, route_table) if resource[:main].to_s == 'true'
     propagate_from!([resource[:propagate_from]].flatten, route_table) if resource[:propagate_from]
 
-    self.class.instance_variable_set('@instances', nil)
-
+    self.class.reset_instances!
     route_table
   rescue Exception => e
     fail e

@@ -50,13 +50,12 @@ Puppet::Type.type(:aws_vpc).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
     vpc.security_groups.first.tags['Name'] = resource[:name]
 
     if resource[:dhcp_options]
-      dhopts = find_dopt(resource[:dhcp_options])
-      fail("Cannot find dhcp options named '#{resource[:dhcp_options]}'") unless dhopts
-      vpc.dhcp_options = dhopts
+      dopts = find_dopt(resource[:dhcp_options])
+      fail("Cannot find dhcp options named '#{resource[:dhcp_options]}'") unless dopts
+      vpc.dhcp_options = dopts.provider.aws_item
     end
 
-    self.class.instance_variable_set('@instances', nil)
-
+    self.class.reset_instances!
     vpc
   end
 

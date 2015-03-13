@@ -22,7 +22,7 @@ class Ec2_api < Puppet::Provider
   self.initvars
 
   def self.instances_class
-    raise "#instances_method not implemented"
+    raise "#instances_class not implemented"
   end
 
   def self.instances
@@ -50,7 +50,12 @@ class Ec2_api < Puppet::Provider
     STDERR.puts "probably due to amazon API errors in prefetch (are you over the limits?)"
     STDERR.puts e.to_s
     STDERR.puts e.backtrace[0..5]
-    Kernel.exit 1
+    Kernel.exit! 1
+  end
+
+  def self.reset_instances!
+    @instances = nil
+    @instance_names = nil
   end
 
   def self.preload(region, item_attrs, describe_call, id_call)
@@ -79,7 +84,7 @@ class Ec2_api < Puppet::Provider
     STDERR.puts "probably due to amazon API errors in prefetch (are you over the limits?)"
     STDERR.puts e.to_s
     STDERR.puts e.backtrace[0..5]
-    Kernel.exit 1
+    Kernel.exit! 1
   end
 
   def lookup(type, name)
@@ -112,12 +117,19 @@ class Ec2_api < Puppet::Provider
     self.class.name_or_id(item)
   end
 
-  def wait_until_status(item, status)
-    sleep 1 until item.status == status
+  def wait_until_status(item, status, limit=1000)
+    sleep 1 while item.state != state && (limit-=1) > 0
   end
 
-  def wait_until_state(item, state)
-    sleep 1 until item.state == state
+  def wait_until_state(item, state, limit=1000)
+    while limit > 0
+      limit -= 1
+      current_state = block_given? ? yield : item.state
+      return true if current_state == state
+      sleep 1
+    end
+
+    false
   end
 
   def tag_with_name(item, name)

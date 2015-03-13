@@ -27,33 +27,42 @@ Puppet::Type.type(:aws_vgw).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api
   read_only(:region, :vpn_type, :region_name, :availability_zone)
 
   def vpc=(name)
-    @property_hash[:aws_item].attach(find_vpc_item_by_name(name))
+    vgw = @property_hash[:aws_item]
+    vgw.attach(find_vpc_item_by_name(name))
+    wait_until_state(nil, :attached, 300) { vgw.attachments.first.state }
   end
+
   def create
-    if !resource[:vpc]
-      fail("Must have a vpc")
+    raise "Must have a vpc" unless resource[:vpc]
+
+    region_name = find_region_name_for_vpc_name resource[:vpc]
+    raise "Cannot find VPC #{resource[:vpc]}" unless region_name
+
+    region = ec2.regions[region_name]
+
+    if resource[:availability_zone]
+      azs = region.availability_zones
+      az  = azs.find { |az| az.to_s == resource[:availability_zone] }
+
+      raise("Cannot find az '#{resource[:availability_zone]}', " <<
+            "need to choose.com: #{azs.to_a.join(", ")}") unless az
     end
-    begin
-      if resource[:availability_zone]
-        my_region = find_region_name_for_vpc_name resource[:vpc]
-        if !my_region
-          fail("Cannot find VPC #{resource[:vpc]}")
-        end
-        azs = ec2.regions[my_region].availability_zones
-        if !azs.find { |az| az.to_s == resource[:availability_zone] }
-          fail("Cannot find az '#{resource[:availability_zone]}', need to choose.com: #{azs.to_a.join(", ")}")
-        end
-      end
-      vgw = ec2.regions[find_region_name_for_vpc_name(resource[:vpc])].vpn_gateways.create([:vpn_type, :availability_zone].inject({}) { |acc, k| acc[k] = resource[k] if resource[k]; acc })
-      tag_with_name vgw, resource[:name]
-      vgw.attach(find_vpc_item_by_name(resource[:vpc]))
-      tags = resource[:tags] || {}
-      tags.each { |k,v| vgw.add_tag(k, :value => v) }
-      vgw
-    rescue Exception => e
-      fail e
-    end
+
+    vgw = region.vpn_gateways.create(
+      [:vpn_type, :availability_zone].inject({}) do |acc, k|
+        resource[k] ? acc.merge!(k => resource[k]) : acc
+      end)
+    wait_until_state(vgw, :available, 10)
+
+    vgw.attach(find_vpc_item_by_name(resource[:vpc]))
+    wait_until_state(nil, :attached, 300) { vgw.attachments.first.state }
+
+    vgw.tags.set({'Name' => resource[:name]}.merge(resource[:tags] || {}))
+    vgw
+  rescue Exception => e
+    fail e
   end
+
   def destroy
     if @property_hash[:aws_item].vpc
       begin # This blows up if already detached, but I can't find how to work that out. FIXME
