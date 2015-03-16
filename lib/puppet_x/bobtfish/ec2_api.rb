@@ -87,18 +87,13 @@ class Ec2_api < Puppet::Provider
     Kernel.exit! 1
   end
 
-  def lookup(type, name)
-    if not name or name =~ /^\s+$/
-      raise "Can't lookup #{type} with blank lookup-name"
-    end
-    # Lookup aws objects from prefetched catalog
-    # TODO: we can probably replace most find by name lookups with this?
-    found = resource.catalog.resource("#{type.capitalize}[#{name}]")
-    if found
-      return found.provider.aws_item
-    else
-      raise "Lookup failed: #{type.capitalize}[#{name}] not found"
-    end
+  def self.lookup(type, id_or_name)
+    Puppet::Type.type(type).provider(:api).
+      instances.find {|res| [res.name, res.aws_item.id].include? id_or_name }
+  end
+
+  def lookup(type, id_or_name)
+    self.class.lookup(type, id_or_name)
   end
 
   def self.read_only(*methods)
