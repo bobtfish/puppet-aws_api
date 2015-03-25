@@ -42,7 +42,7 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
     # fuck puppet for not having nils
     if value && "#{value}" !~ /undef/
       @property_hash[:aws_item].route_table =
-        lookup(:aws_routetable, item.route_table.id).aws_item
+        lookup(:aws_routetable, value).aws_item
     end
   end
 
@@ -65,7 +65,7 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
     subnet.tags.set((resource[:tags] || {}).merge('Name' => resource[:name]))
 
     if resource[:route_table] && "#{resource[:route_table]}" !~ /undef/
-      subnet.route_table = lookup(:aws_routetable).aws_item
+      subnet.route_table = lookup(:aws_routetable, resource[:route_table]).aws_item
     end
 
     subnet
