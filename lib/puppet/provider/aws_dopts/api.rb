@@ -39,6 +39,7 @@ Puppet::Type.type(:aws_dopts).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_a
       tag_with_name dopts, resource[:name]
       tags = resource[:tags] || {}
       tags.each { |k,v| dopts.add_tag(k, :value => v) }
+      self.class.reset_instances!
       dopts
     rescue Exception => e
       fail e
