@@ -33,7 +33,8 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
       :cidr        => item.cidr_block,
       :az          => item.availability_zone_name,
       :tags        => tags,
-      :route_table => lookup(:aws_routetable, item.route_table.id).name )
+      :route_table => lookup(:aws_routetable, item.route_table.id).name,
+      :auto_assign_ip => item.pre_map_public_ip_on_launch.to_s.to_sym )
   end
 
   def self.instances_class; AWS::EC2::Subnet; end
@@ -44,6 +45,21 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
       @property_hash[:aws_item].route_table =
         lookup(:aws_routetable, value).aws_item
     end
+  end
+
+  def auto_assign_ip=(value)
+    auto_assign_ip!(@property_hash[:aws_item], value == :true)
+  end
+
+  def auto_assign_ip!(subnet, value)
+    # UGLY HACK TIME
+    client = subnet.client.clone
+    def client.build_request(*args)
+      super.tap {|r| r.body.gsub!(/Version=[0-9\-]+/, 'Version=2014-06-15')}
+    end
+
+    client.modify_subnet_attribute(
+      :subnet_id => subnet.id, :map_public_ip_on_launch => { :value => value } )
   end
 
   def create
@@ -66,6 +82,10 @@ Puppet::Type.type(:aws_subnet).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_
 
     if resource[:route_table] && "#{resource[:route_table]}" !~ /undef/
       subnet.route_table = lookup(:aws_routetable, resource[:route_table]).aws_item
+    end
+
+    unless resource[:auto_assign_ip].nil?
+      auto_assign_ip!(subnet, resource[:auto_assign_ip] == :true)
     end
 
     subnet
