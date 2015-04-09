@@ -4,7 +4,7 @@ Puppet::Type.newtype(:aws_routetable) do
   ensurable
   newproperty(:vpc)
   newproperty(:subnets)
-  newproperty(:routes)
+  newproperty(:routes, :array_matching => :all)
   newproperty(:main) do
     newvalue 'true'
     newvalue 'false'

@@ -3,7 +3,7 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'pu
 Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::Ec2_api) do
   mk_resource_methods
   remove_method :tags= # We want the method inherited from the parent
-  read_only :vpc, :subnets, :routes
+  read_only :vpc, :subnets
 
   def main=(value)
     if value.to_s != 'true'
@@ -43,21 +43,37 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
       :main             => item.pre_association_set.find{|a| a[:main] } ? 'true' : 'false',
       :vpc              => name_or_id(find_vpc_item_by_name(item.pre_vpc_id)),
       :subnets          => item.subnets.map { |subnet| subnet.tags.to_h['Name'] || subnet.id },
-      :routes           => item.pre_route_set.map do |route_details|
-        route = AWS::EC2::RouteTable::Route.new(item, route_details)
-        igw   = Puppet::Type.type(:aws_igw).provider(:api).instances.
-          find {|igw| igw.aws_item.id == route.internet_gateway.id} if route.internet_gateway
-        igw   = igw.aws_item if igw
+      :routes           => item.pre_route_set.map{|r| munge_route(r) }.compact,
+      :propagate_from   => gw_names)
+  end
 
-        { :destination_cidr_block => route.destination_cidr_block,
-          :state => route.state,
-          :target => route.target.id == 'local' ? 'local' : name_or_id(route.target),
-          :origin => route.origin,
-          :network_interface => name_or_id(route.network_interface),
-          :internet_gateway => name_or_id(igw) }.
-            reject { |k,v| v.nil? }
-      end,
-      :propagate_from => gw_names)
+  # this is what puppet resource param value will be (is, should, etc)
+  def self.munge_route(route)
+    return unless route[:gateway_id]
+
+    gateway = lookup(:aws_igw, route[:gateway_id])
+    return unless gateway
+
+    { 'cidr' => route[:destination_cidr_block], 'gateway' => gateway.name }
+  end
+
+  # this will be fed into create_route
+  def self.unmunge_route(route)
+    gateway = lookup(:aws_igw, route['gateway'])
+    return unless gateway
+
+    { :destination_cidr_block => route['cidr'], :internet_gateway => gateway.aws_item.id }
+  end
+
+  def routes=(new_routes)
+    require 'pry'; binding.pry
+    ([new_routes].flatten - routes).each do |route|
+      route_options = self.class.unmunge_route(route)
+      next unless route_options
+
+      cidr = route_options.delete :destination_cidr_block
+      aws_item.create_route cidr, route_options
+    end
   end
 
   def self.instances_class; AWS::EC2::RouteTable; end
@@ -76,6 +92,7 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
 
     set_as_main!(vpc, route_table) if resource[:main].to_s == 'true'
     propagate_from!([resource[:propagate_from]].flatten, route_table) if resource[:propagate_from]
+    self.routes = resource[:routes] if resource[:routes]
 
     self.class.reset_instances!
     route_table
