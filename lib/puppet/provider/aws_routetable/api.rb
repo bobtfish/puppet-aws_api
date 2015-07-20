@@ -66,7 +66,6 @@ Puppet::Type.type(:aws_routetable).provide(:api, :parent => Puppet_X::Bobtfish::
   end
 
   def routes=(new_routes)
-    require 'pry'; binding.pry
     ([new_routes].flatten - routes).each do |route|
       route_options = self.class.unmunge_route(route)
       next unless route_options
