@@ -1,3 +1,12 @@
+
+# WARNING
+
+*DO NOT* use this code in production, it is no longer maintained or supported.
+
+Instead please see [puppetlabs-aws](https://github.com/puppetlabs/puppetlabs-aws) if you
+really want to do this sort of thing in puppet (which I no longer recommend), or [Terraform](http://terraform.io)
+for a generally (in my opinion) better solution.
+
 ####Table of Contents
 
 1. [Overview](#overview)
